@@ -1,7 +1,7 @@
 
 path = 'dataset/finefoods.txt'
 
-def load_and_preprocess_data(print_info=True):
+def load_and_preprocess_data(print_dataset_info=True):
     # Initialize empty lists to store scores and texts
     scores = []
     texts = []
