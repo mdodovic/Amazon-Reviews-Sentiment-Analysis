@@ -1,2 +1,5 @@
 # Amazon-Reviews-Sentiment-Analysis
-TBD
+
+## Usage
+
+Run setup.bat script only once.
