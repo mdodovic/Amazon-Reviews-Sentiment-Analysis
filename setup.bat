@@ -1,9 +1,12 @@
-python -m pip install --user --upgrade pip
-pip install --user virtualenv
-python -m venv ml_venv
-ml_venv\Scripts\activate.bat
-echo "Install requirements"
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
-pip install --user -r requirements.txt
+@echo off
+set VENV_NAME=ml_venv
 
-echo "Setup complete."
+echo Creating virtual environment %VENV_NAME%...
+python -m venv %VENV_NAME%
+
+echo Activating virtual environment %VENV_NAME%...
+call %VENV_NAME%\Scripts\activate
+
+echo Installing necessary packages ...
+pip install -r requirements.txt
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
