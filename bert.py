@@ -42,6 +42,33 @@ class SentimentClassifier(nn.Module):
         logits = self.fc(pooler_output)
         return logits
 
+
+    def save_model(self, file_path):
+        """
+        Save the model's state dictionary to a file.
+
+        Args:
+            file_path (str): The path to the file where the model will be saved.
+        """
+        torch.save(self.state_dict(), file_path)
+
+    def load_model(cls, file_path, pretrained_model, num_classes):
+        """
+        Load a model from a saved state dictionary file.
+
+        Args:
+            file_path (str): The path to the saved model file.
+            pretrained_model: The pretrained BERT model to use.
+            num_classes (int): The number of output classes.
+
+        Returns:
+            SentimentClassifier: The loaded model.
+        """
+        model = cls(pretrained_model, num_classes)
+        model.load_state_dict(torch.load(file_path))
+        return model
+
+
 # Create train and test datasets
 # Replace this with your dataset loading and preprocessing code
 
@@ -141,7 +168,7 @@ for epoch in range(EPOCHS):
         wait = 0  # Reset the wait counter since there's improvement
         # save model
         path_to_model = './models/bert_amazon_food_review'
-        model.save_pretrained(path_to_model)
+        model.save_model(path_to_model)
 
     else:
         wait += 1
