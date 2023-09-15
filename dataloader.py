@@ -25,7 +25,7 @@ def load_and_preprocess_data(path_to_file, print_dataset_info=True):
         elif not line:
             # Join the lines of the review text and append to the texts list
             if current_score is not None and current_text:
-                scores.append(current_score - 1)
+                scores.append(current_score - 1) # Adjusted to be 0 to 4
                 texts.append(' '.join(current_text))
 
             # Reset variables for the next review
