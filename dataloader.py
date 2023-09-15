@@ -1,13 +1,10 @@
-
-path = 'dataset/finefoods.txt'
-
-def load_and_preprocess_data(print_dataset_info=True):
+def load_and_preprocess_data(path_to_file, print_dataset_info=True):
     # Initialize empty lists to store scores and texts
     scores = []
     texts = []
 
     # Open and read the file
-    with open(path, 'r', encoding='utf-8') as file:
+    with open(path_to_file, 'r', encoding='utf-8') as file:
         lines = file.readlines()
 
     # Initialize variables to store temporary data

@@ -14,13 +14,15 @@ from dataloader import load_and_preprocess_data
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-texts, labels = load_and_preprocess_data()
+path_to_file = "./dataset/" + "test.txt"
+
+texts, labels = load_and_preprocess_data(path_to_file)
 
 # Define hyperparameters
 MAX_SEQ_LENGTH = 128
-BATCH_SIZE = 32
-LEARNING_RATE = 1e-5
-EPOCHS = 5
+BATCH_SIZE = 64
+LEARNING_RATE = 1e-8
+EPOCHS = 100
 
 # Load a pre-trained BERT tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
