@@ -20,7 +20,7 @@ texts, labels = load_and_preprocess_data(path_to_file)
 
 # Define hyperparameters
 MAX_SEQ_LENGTH = 128
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 LEARNING_RATE = 1e-8
 EPOCHS = 100
 
@@ -84,6 +84,11 @@ train_losses = []
 validation_losses = []
 validation_accuracies = []
 
+# Early stopping variables
+best_val_loss = float('inf')  # Initialize with a large value
+patience = 3  # Number of epochs to wait for improvement
+wait = 0  # Counter for consecutive epochs without improvement
+
 # Training loop
 for epoch in range(EPOCHS):
     model.train()
@@ -130,10 +135,24 @@ for epoch in range(EPOCHS):
     avg_val_loss = total_val_loss / len(DataLoader(TensorDataset(X_test_ids, X_test_masks, torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE))
     validation_losses.append(avg_val_loss)
 
+    # Early stopping check
+    if avg_val_loss < best_val_loss:
+        best_val_loss = avg_val_loss
+        wait = 0  # Reset the wait counter since there's improvement
+        # save model
+        path_to_model = './models/bert_amazon_food_review'
+        model.save_pretrained(path_to_model)
+
+    else:
+        wait += 1
+        if wait >= patience:
+            print(f"Early stopping after {epoch + 1} epochs without improvement.")
+            break  # Stop training
+
 # Plot the training and validation loss
 plt.figure(figsize=(10, 5))
-plt.plot(range(1, EPOCHS + 1), train_losses, label='Training Loss', marker='o')
-plt.plot(range(1, EPOCHS + 1), validation_losses, label='Validation Loss', marker='o')
+plt.plot(range(1, len(train_losses) + 1), train_losses, label='Training Loss', marker='o')
+plt.plot(range(1, len(validation_losses) + 1), validation_losses, label='Validation Loss', marker='o')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
