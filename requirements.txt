@@ -29,3 +29,5 @@ tqdm==4.66.1
 transformers==4.33.1
 typing_extensions==4.7.1
 urllib3==2.0.4
+torchdata==0.6.1
+torchtext==0.15.2
