@@ -14,6 +14,7 @@ from dataloader import load_and_preprocess_data
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
+path_to_model = './models/bert_amazon_food_review2'
 path_to_file = "./dataset/" + "test.txt"
 
 texts, labels = load_and_preprocess_data(path_to_file)
@@ -22,7 +23,7 @@ texts, labels = load_and_preprocess_data(path_to_file)
 MAX_SEQ_LENGTH = 128
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-8
-EPOCHS = 100
+EPOCHS = 6
 
 # Load a pre-trained BERT tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
@@ -42,37 +43,22 @@ class SentimentClassifier(nn.Module):
         logits = self.fc(pooler_output)
         return logits
 
-
     def save_model(self, file_path):
-        """
-        Save the model's state dictionary to a file.
+        torch.save(self, file_path)
 
-        Args:
-            file_path (str): The path to the file where the model will be saved.
-        """
-        torch.save(self.state_dict(), file_path)
-
-    def load_model(cls, file_path, pretrained_model, num_classes):
-        """
-        Load a model from a saved state dictionary file.
-
-        Args:
-            file_path (str): The path to the saved model file.
-            pretrained_model: The pretrained BERT model to use.
-            num_classes (int): The number of output classes.
-
-        Returns:
-            SentimentClassifier: The loaded model.
-        """
-        model = cls(pretrained_model, num_classes)
-        model.load_state_dict(torch.load(file_path))
+    @classmethod
+    def load_model(cls, file_path):
+        model = torch.load(file_path)
         return model
 
 
 # Create train and test datasets
 # Replace this with your dataset loading and preprocessing code
 
-X_train, X_test, y_train, y_test = train_test_split(texts, labels, test_size=0.2, random_state=42)
+# Split data into training, validation, and test sets
+X_train, X_temp, y_train, y_temp = train_test_split(texts, labels, test_size=0.02, random_state=42)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+
 
 # Tokenize and pad sequences
 def tokenize_and_pad(texts, tokenizer, max_length):
@@ -93,11 +79,15 @@ def tokenize_and_pad(texts, tokenizer, max_length):
     return torch.cat(input_ids, dim=0), torch.cat(attention_masks, dim=0)
 
 X_train_ids, X_train_masks = tokenize_and_pad(X_train, tokenizer, MAX_SEQ_LENGTH)
+X_val_ids, X_val_masks = tokenize_and_pad(X_val, tokenizer, MAX_SEQ_LENGTH)
 X_test_ids, X_test_masks = tokenize_and_pad(X_test, tokenizer, MAX_SEQ_LENGTH)
 
-# Create DataLoader for batching
+# Create DataLoader for training and validation
 train_data = TensorDataset(X_train_ids.to(device), X_train_masks.to(device), torch.tensor(y_train, dtype=torch.long).to(device))
 train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
+
+val_data = TensorDataset(X_val_ids.to(device), X_val_masks.to(device), torch.tensor(y_val, dtype=torch.long).to(device))
+val_loader = DataLoader(val_data, batch_size=BATCH_SIZE)
 
 # Initialize the model
 num_classes = len(np.unique(labels))
@@ -106,9 +96,10 @@ model = SentimentClassifier(model, num_classes).to(device)
 optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 criterion = nn.CrossEntropyLoss().to(device)
 
-# Initialize lists to store training and validation losses
+# Initialize lists to store training and validation losses and accuracies
 train_losses = []
 validation_losses = []
+train_accuracies = []
 validation_accuracies = []
 
 # Early stopping variables
@@ -120,6 +111,9 @@ wait = 0  # Counter for consecutive epochs without improvement
 for epoch in range(EPOCHS):
     model.train()
     total_loss = 0
+    correct_train = 0
+    total_train = 0
+    
     for batch in tqdm(train_loader, desc=f"Epoch {epoch + 1}/{EPOCHS}"):
         input_ids, attention_mask, labels = batch
         optimizer.zero_grad()
@@ -128,27 +122,35 @@ for epoch in range(EPOCHS):
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-    
-    # Calculate and print average loss for this epoch
+        
+        # Calculate training accuracy
+        _, predicted = torch.max(logits, 1)
+        total_train += labels.size(0)
+        correct_train += (predicted == labels).sum().item()
+
+    # Calculate and print average loss and accuracy for this epoch
     avg_loss = total_loss / len(train_loader)
-    print(f"Epoch {epoch + 1}/{EPOCHS}, Loss: {avg_loss:.4f}")
+    train_accuracy = 100 * correct_train / total_train
+    
+    print(f"Epoch {epoch + 1}/{EPOCHS})")
+    print(f"Training loss: {avg_loss:.4f}, Training Accuracy: {train_accuracy:.2f}%")
     
     train_losses.append(avg_loss)
+    train_accuracies.append(train_accuracy)
 
     # Evaluation on the validation set
     model.eval()
     y_pred = []
     with torch.no_grad():
-        for batch in DataLoader(TensorDataset(X_test_ids, X_test_masks), batch_size=BATCH_SIZE):
-            input_ids, attention_mask = batch
+        for batch in val_loader:
+            input_ids, attention_mask, labels = batch
             logits = model(input_ids, attention_mask)
             predictions = torch.argmax(logits, dim=1)
             y_pred.extend(predictions.cpu().numpy())
 
     # Calculate accuracy on the validation set
-    accuracy = accuracy_score(y_test, y_pred)
+    accuracy = accuracy_score(y_val, y_pred)
     validation_accuracies.append(accuracy)
-    print(f"Validation Accuracy: {accuracy:.4f}")
 
     # Calculate and store validation loss
     model.train()
@@ -162,12 +164,14 @@ for epoch in range(EPOCHS):
     avg_val_loss = total_val_loss / len(DataLoader(TensorDataset(X_test_ids, X_test_masks, torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE))
     validation_losses.append(avg_val_loss)
 
+    print(f"Validation loss: {avg_loss:.4f}, Validation Accuracy: {train_accuracy:.2f}%")
+
+
     # Early stopping check
     if avg_val_loss < best_val_loss:
         best_val_loss = avg_val_loss
         wait = 0  # Reset the wait counter since there's improvement
         # save model
-        path_to_model = './models/bert_amazon_food_review'
         model.save_model(path_to_model)
 
     else:
@@ -176,8 +180,28 @@ for epoch in range(EPOCHS):
             print(f"Early stopping after {epoch + 1} epochs without improvement.")
             break  # Stop training
 
-# Plot the training and validation loss
-plt.figure(figsize=(10, 5))
+# Load the best model from the saved checkpoint
+model.load_model(path_to_model)
+
+# Evaluate the model on the test set
+model.eval()
+y_test_pred = []
+with torch.no_grad():
+    for batch in DataLoader(TensorDataset(X_test_ids, X_test_masks), batch_size=BATCH_SIZE):
+        input_ids, attention_mask = batch
+        logits = model(input_ids, attention_mask)
+        predictions = torch.argmax(logits, dim=1)
+        y_test_pred.extend(predictions.cpu().numpy())
+
+# Calculate accuracy on the test set
+test_accuracy = accuracy_score(y_test, y_test_pred)
+print(f"Test Accuracy: {test_accuracy:.4f}")
+
+# Plot the training and validation loss and accuracy
+plt.figure(figsize=(12, 6))
+
+# Loss Plot
+plt.subplot(1, 2, 1)
 plt.plot(range(1, len(train_losses) + 1), train_losses, label='Training Loss', marker='o')
 plt.plot(range(1, len(validation_losses) + 1), validation_losses, label='Validation Loss', marker='o')
 plt.xlabel('Epoch')
@@ -185,4 +209,16 @@ plt.ylabel('Loss')
 plt.legend()
 plt.title('Training and Validation Loss')
 plt.grid(True)
+
+# Accuracy Plot
+plt.subplot(1, 2, 2)
+plt.plot(range(1, len(train_accuracies) + 1), train_accuracies, label='Training Accuracy', marker='o')
+plt.plot(range(1, len(validation_accuracies) + 1), validation_accuracies, label='Validation Accuracy', marker='o')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.title('Training and Validation Accuracy')
+plt.grid(True)
+
+plt.tight_layout()
 plt.show()
