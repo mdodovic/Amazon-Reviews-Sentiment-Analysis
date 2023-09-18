@@ -99,7 +99,7 @@ num_classes = len(np.unique(labels))
 print(num_classes)
 model = SentimentClassifier(model, num_classes).to(device)
 optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-criterion = nn.CrossEntropyLoss().to(device)
+criterion = nn.CrossEntropyLoss().to(device) # TODO: Change to MSE
 
 # Initialize lists to store training and validation losses and accuracies
 train_losses = []
