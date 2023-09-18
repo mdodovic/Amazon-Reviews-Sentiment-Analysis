@@ -8,6 +8,7 @@ from sklearn.metrics import accuracy_score
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import os
 
 from dataloader import load_and_preprocess_data
 
@@ -44,7 +45,11 @@ class SentimentClassifier(nn.Module):
         return logits
 
     def save_model(self, file_path):
-        torch.save(self, file_path)
+        dir_path = os.path.dirname(file_path)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)        
+
+        torch.save(self.state_dict(), file_path)
 
     @classmethod
     def load_model(cls, file_path):
