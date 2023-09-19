@@ -137,7 +137,7 @@ for epoch in range(EPOCHS):
     avg_loss = total_loss / len(train_loader)
     train_accuracy = 100 * correct_train / total_train
     
-    print(f"Epoch {epoch + 1}/{EPOCHS})")
+    print(f"Epoch {epoch + 1}/{EPOCHS}")
     print(f"Training loss: {avg_loss:.4f}, Training Accuracy: {train_accuracy:.2f}%")
     
     train_losses.append(avg_loss)
