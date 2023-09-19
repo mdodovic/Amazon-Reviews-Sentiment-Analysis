@@ -169,7 +169,7 @@ for epoch in range(EPOCHS):
     avg_val_loss = total_val_loss / len(DataLoader(TensorDataset(X_test_ids, X_test_masks, torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE))
     validation_losses.append(avg_val_loss)
 
-    print(f"Validation loss: {avg_loss:.4f}, Validation Accuracy: {train_accuracy:.2f}%")
+    print(f"Validation loss: {avg_val_loss:.4f}, Validation Accuracy: {train_accuracy:.2f}%")
 
 
     # Early stopping check
