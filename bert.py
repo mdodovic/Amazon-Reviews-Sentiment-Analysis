@@ -147,16 +147,18 @@ for epoch in range(EPOCHS):
 
     # Evaluation on the validation set
     model.eval()
-    y_pred = []
+    correct_val = 0
+    total_val = 0
     with torch.no_grad():
         for batch in val_loader:
             input_ids, attention_mask, labels = batch
             logits = model(input_ids, attention_mask)
             predictions = torch.argmax(logits, dim=1)
-            y_pred.extend(predictions.cpu().numpy())
+            total_val += labels.size(0)
+            correct_val += (predictions == labels).sum().item()
 
     # Calculate accuracy on the validation set
-    accuracy = accuracy_score(y_val, y_pred)
+    accuracy = 100 * correct_val / total_val
     validation_accuracies.append(accuracy)
 
     # Calculate and store validation loss
@@ -171,7 +173,7 @@ for epoch in range(EPOCHS):
     avg_val_loss = total_val_loss / len(DataLoader(TensorDataset(X_test_ids, X_test_masks, torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE))
     validation_losses.append(avg_val_loss)
 
-    print(f"Validation loss: {avg_val_loss:.4f}, Validation Accuracy: {accuracy:.2f}")
+    print(f"Validation loss: {avg_val_loss:.4f}, Validation Accuracy: {accuracy:.2f}%")
 
     # Early stopping check
     if avg_val_loss < best_val_loss:
@@ -191,17 +193,19 @@ model.load_model(path_to_model)
 
 # Evaluate the model on the test set
 model.eval()
-y_test_pred = []
+correct_test = 0
+total_test = 0
 with torch.no_grad():
     for batch in DataLoader(TensorDataset(X_test_ids, X_test_masks), batch_size=BATCH_SIZE):
-        input_ids, attention_mask = batch
+        input_ids, attention_mask, labels = batch
         logits = model(input_ids, attention_mask)
         predictions = torch.argmax(logits, dim=1)
-        y_test_pred.extend(predictions.cpu().numpy())
+        total_test += labels.size(0)
+        correct_test += (predictions == labels).sum().item()
 
 # Calculate accuracy on the test set
-test_accuracy = accuracy_score(y_test, y_test_pred)
-print(f"Test Accuracy: {test_accuracy:.4f}")
+test_accuracy = 100 * correct_test / total_test
+print(f"Test Accuracy: {test_accuracy:.2f}%")
 
 # Plot the training and validation loss and accuracy
 plt.figure(figsize=(12, 6))
