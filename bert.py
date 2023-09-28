@@ -9,6 +9,7 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
+import torch.nn.functional as F
 
 from dataloader import load_and_preprocess_data
 
@@ -36,16 +37,23 @@ for param in bert_model.parameters():
 
 # Define the sentiment analysis model
 class SentimentClassifier(nn.Module):
-    def __init__(self, pretrained_model, num_classes):
+    def __init__(self, pretrained_model, num_classes, hidden_dim=256, dropout_prob=0.2):
         super(SentimentClassifier, self).__init__()
         self.bert = pretrained_model
-        self.fc = nn.Linear(self.bert.config.hidden_size, num_classes)
+        self.fc1 = nn.Linear(self.bert.config.hidden_size, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, num_classes)
+        self.dropout = nn.Dropout(dropout_prob)
         
     def forward(self, input_ids, attention_mask):
         outputs = self.bert(input_ids, attention_mask=attention_mask)
         last_hidden_state = outputs.last_hidden_state
         pooler_output = torch.mean(last_hidden_state, dim=1)  # Mean pooling
-        logits = self.fc(pooler_output)
+        x = F.relu(self.fc1(pooler_output))
+        x = self.dropout(x)
+        x = F.relu(self.fc2(x))
+        x = self.dropout(x)
+        logits = self.fc3(x)
         return logits
 
     def save_model(self, file_path):
