@@ -24,7 +24,7 @@ texts, labels = load_and_preprocess_data(path_to_file)
 MAX_SEQ_LENGTH = 128
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-8
-EPOCHS = 1000 # this huge number of epochs is used due to usage of early stopping
+EPOCHS = 5  # 1000
 
 # Load a pre-trained BERT tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
@@ -196,7 +196,7 @@ model.eval()
 correct_test = 0
 total_test = 0
 with torch.no_grad():
-    for batch in DataLoader(TensorDataset(X_test_ids, X_test_masks), batch_size=BATCH_SIZE):
+    for batch in DataLoader(TensorDataset(X_test_ids, X_test_masks, torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE):
         input_ids, attention_mask, labels = batch
         logits = model(input_ids, attention_mask)
         predictions = torch.argmax(logits, dim=1)
