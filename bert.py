@@ -16,7 +16,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 path_to_model = './models/bert_amazon_food_review'
-path_to_file = "./dataset/" + "finefoods.txt"
+path_to_file = "./dataset/" + "test.txt"
 
 texts, labels = load_and_preprocess_data(path_to_file)
 
@@ -24,7 +24,7 @@ texts, labels = load_and_preprocess_data(path_to_file)
 MAX_SEQ_LENGTH = 128
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-8
-EPOCHS = 10 #1000
+EPOCHS = 5 #1000
 
 # Load a pre-trained BERT tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
@@ -109,7 +109,7 @@ validation_accuracies = []
 
 # Early stopping variables
 best_val_loss = float('inf')  # Initialize with a large value
-patience = 3  # Number of epochs to wait for improvement
+patience = 5  # Number of epochs to wait for improvement
 wait = 0  # Counter for consecutive epochs without improvement
 
 # Training loop
