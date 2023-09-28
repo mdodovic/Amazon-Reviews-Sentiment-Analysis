@@ -24,11 +24,15 @@ texts, labels = load_and_preprocess_data(path_to_file)
 MAX_SEQ_LENGTH = 128
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-8
-EPOCHS = 5 #1000
+EPOCHS = 5  # 1000
 
 # Load a pre-trained BERT tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model = BertModel.from_pretrained('bert-base-uncased').to(device)
+bert_model = BertModel.from_pretrained('bert-base-uncased').to(device)
+
+# Freeze all BERT layers
+for param in bert_model.parameters():
+    param.requires_grad = False
 
 # Define the sentiment analysis model
 class SentimentClassifier(nn.Module):
@@ -56,14 +60,12 @@ class SentimentClassifier(nn.Module):
         model = torch.load(file_path)
         return model
 
-
 # Create train and test datasets
 # Replace this with your dataset loading and preprocessing code
 
 # Split data into training, validation, and test sets
 X_train, X_temp, y_train, y_temp = train_test_split(texts, labels, test_size=0.02, random_state=42)
 X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
-
 
 # Tokenize and pad sequences
 def tokenize_and_pad(texts, tokenizer, max_length):
@@ -97,9 +99,9 @@ val_loader = DataLoader(val_data, batch_size=BATCH_SIZE)
 # Initialize the model
 num_classes = len(np.unique(labels))
 print(num_classes)
-model = SentimentClassifier(model, num_classes).to(device)
+model = SentimentClassifier(bert_model, num_classes).to(device)
 optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-criterion = nn.CrossEntropyLoss().to(device) # TODO: Change to MSE
+criterion = nn.CrossEntropyLoss().to(device)  # TODO: Change to MSE
 
 # Initialize lists to store training and validation losses and accuracies
 train_losses = []
@@ -169,8 +171,7 @@ for epoch in range(EPOCHS):
     avg_val_loss = total_val_loss / len(DataLoader(TensorDataset(X_test_ids, X_test_masks, torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE))
     validation_losses.append(avg_val_loss)
 
-    print(f"Validation loss: {avg_val_loss:.4f}, Validation Accuracy: {accuracy:.2f}%")
-
+    print(f"Validation loss: {avg_val_loss:.4f}, Validation Accuracy: {accuracy:.2f}")
 
     # Early stopping check
     if avg_val_loss < best_val_loss:
