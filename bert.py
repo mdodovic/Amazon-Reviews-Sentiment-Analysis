@@ -37,14 +37,20 @@ for param in bert_model.parameters():
 
 # Define the sentiment analysis model
 class SentimentClassifier(nn.Module):
-    def __init__(self, pretrained_model, num_classes, hidden_dim=256, dropout_prob=0.2):
+    
+    def __init__(self, pretrained_model, num_classes, hidden_dim=256, dropout_prob=0.2, unfreeze_layers=0):
         super(SentimentClassifier, self).__init__()
         self.bert = pretrained_model
+
+        # Unfreeze BERT layers
+        for param in self.bert.encoder.layer[-unfreeze_layers:].parameters():
+            param.requires_grad = True
+
         self.fc1 = nn.Linear(self.bert.config.hidden_size, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = nn.Linear(hidden_dim, num_classes)
         self.dropout = nn.Dropout(dropout_prob)
-        
+
     def forward(self, input_ids, attention_mask):
         outputs = self.bert(input_ids, attention_mask=attention_mask)
         last_hidden_state = outputs.last_hidden_state
@@ -104,12 +110,12 @@ train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 val_data = TensorDataset(X_val_ids.to(device), X_val_masks.to(device), torch.tensor(y_val, dtype=torch.long).to(device))
 val_loader = DataLoader(val_data, batch_size=BATCH_SIZE)
 
-# Initialize the model
+# Initialize the model with 4 layers unfrozen
 num_classes = len(np.unique(labels))
-print(num_classes)
-model = SentimentClassifier(bert_model, num_classes).to(device)
+print(f"{num_classes} different classes.")
+model = SentimentClassifier(bert_model, num_classes=num_classes, unfreeze_layers=4).to(device)
 optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-criterion = nn.CrossEntropyLoss().to(device)  # TODO: Change to MSE
+criterion = nn.CrossEntropyLoss().to(device)
 
 # Initialize lists to store training and validation losses and accuracies
 train_losses = []
