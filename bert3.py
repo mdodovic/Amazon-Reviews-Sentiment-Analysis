@@ -69,6 +69,7 @@ for epoch in range(num_epochs):
     # Validation loop
     model.eval()
     all_val_preds = []
+    all_val_labels = []
     with torch.no_grad():
         for val_batch in tqdm(val_loader, desc=f'Epoch {epoch + 1} Validation'):
             val_input_ids, val_attention_mask, val_labels = val_batch
@@ -77,9 +78,10 @@ for epoch in range(num_epochs):
             val_outputs = model(val_input_ids, attention_mask=val_attention_mask, labels=val_labels)
             val_preds = torch.argmax(val_outputs.logits, dim=1).cpu().numpy()
             all_val_preds.extend(val_preds)
+            all_val_labels.extend(val_labels.cpu().numpy())
 
     # Calculate validation accuracy
-    val_accuracy = accuracy_score(val_labels, all_val_preds)
+    val_accuracy = accuracy_score(all_val_labels, all_val_preds)
 
     print(f'Epoch {epoch + 1} Validation Accuracy: {val_accuracy}')
 
