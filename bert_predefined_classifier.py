@@ -13,7 +13,7 @@ from dataloader import load_and_preprocess_data
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-path_to_model = './models/bert_amazon_food_review'
+path_to_model = './models/bert_amazon_food_review/'
 path_to_file = "./dataset/" + "finefoods.txt"
 
 texts, labels = load_and_preprocess_data(path_to_file)
@@ -141,7 +141,7 @@ for epoch in range(EPOCHS):
     if avg_val_loss < best_val_loss:
         best_val_loss = avg_val_loss
         wait = 0  # Reset the wait counter since there's improvement
-        # save model
+        # Save model
         bert_model.save_pretrained(path_to_model)
 
     else:
