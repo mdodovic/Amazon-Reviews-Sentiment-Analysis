@@ -30,6 +30,7 @@ train_texts, val_texts, train_labels, val_labels = train_test_split(texts, label
 # Load BERT tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_labels)
+model.to(device)
 
 # Tokenize and create DataLoader
 train_encodings = tokenizer(train_texts, truncation=True, padding=True, max_length=128, return_tensors='pt')
