@@ -1,7 +1,5 @@
 import torch
-import torch.nn as nn
-from transformers import BertTokenizer, BertModel
-import torch.optim as optim
+from transformers import BertTokenizer, BertForSequenceClassification, AdamW
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -9,77 +7,26 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
-import torch.nn.functional as F
 
-from dataloader import load_and_preprocess_data
+from dataloader import load_and_preprocess_data_no_subtract
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-path_to_model = './models/bert_amazon_food_review'
-path_to_file = "./dataset/" + "finefoods.txt"
+path_to_model = './models/new_bert_amazon_food_review'
+path_to_file = "./dataset/" + "test.txt"
 
-texts, labels = load_and_preprocess_data(path_to_file)
+texts, labels = load_and_preprocess_data_no_subtract(path_to_file)
 
 # Define hyperparameters
 MAX_SEQ_LENGTH = 128
 BATCH_SIZE = 32
-LEARNING_RATE = 1e-8
+LEARNING_RATE = 1e-5  # Adjusted learning rate for BERT models
 EPOCHS = 15
 
 # Load a pre-trained BERT tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-bert_model = BertModel.from_pretrained('bert-base-uncased').to(device)
-
-# Freeze all BERT layers
-for param in bert_model.parameters():
-    param.requires_grad = False
-
-# Define the sentiment analysis model
-class SentimentClassifier(nn.Module):
-    
-    def __init__(self, pretrained_model, num_classes, hidden_dim=256, dropout_prob=0.2, unfreeze_layers=0):
-        super(SentimentClassifier, self).__init__()
-        self.bert = pretrained_model
-
-        # Unfreeze BERT layers
-        for param in self.bert.encoder.layer[-unfreeze_layers:].parameters():
-            param.requires_grad = True
-
-        self.fc1 = nn.Linear(self.bert.config.hidden_size, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, num_classes)
-        self.dropout = nn.Dropout(dropout_prob)
-
-    def forward(self, input_ids, attention_mask):
-        outputs = self.bert(input_ids, attention_mask=attention_mask)
-        last_hidden_state = outputs.last_hidden_state
-        pooler_output = torch.mean(last_hidden_state, dim=1)  # Mean pooling
-        x = F.relu(self.fc1(pooler_output))
-        x = self.dropout(x)
-        x = F.relu(self.fc2(x))
-        x = self.dropout(x)
-        logits = self.fc3(x)
-        return logits
-
-    def save_model(self, file_path):
-        dir_path = os.path.dirname(file_path)
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)        
-
-        torch.save(self.state_dict(), file_path)
-
-    @classmethod
-    def load_model(cls, file_path):
-        model = torch.load(file_path)
-        return model
-
-# Create train and test datasets
-# Replace this with your dataset loading and preprocessing code
-
-# Split data into training, validation, and test sets
-X_train, X_temp, y_train, y_temp = train_test_split(texts, labels, test_size=0.02, random_state=42)
-X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=len(np.unique(labels))).to(device)
 
 # Tokenize and pad sequences
 def tokenize_and_pad(texts, tokenizer, max_length):
@@ -99,6 +46,9 @@ def tokenize_and_pad(texts, tokenizer, max_length):
         attention_masks.append(encoded['attention_mask'])
     return torch.cat(input_ids, dim=0), torch.cat(attention_masks, dim=0)
 
+X_train, X_temp, y_train, y_temp = train_test_split(texts, labels, test_size=0.02, random_state=42)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+
 X_train_ids, X_train_masks = tokenize_and_pad(X_train, tokenizer, MAX_SEQ_LENGTH)
 X_val_ids, X_val_masks = tokenize_and_pad(X_val, tokenizer, MAX_SEQ_LENGTH)
 X_test_ids, X_test_masks = tokenize_and_pad(X_test, tokenizer, MAX_SEQ_LENGTH)
@@ -110,12 +60,9 @@ train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 val_data = TensorDataset(X_val_ids.to(device), X_val_masks.to(device), torch.tensor(y_val, dtype=torch.long).to(device))
 val_loader = DataLoader(val_data, batch_size=BATCH_SIZE)
 
-# Initialize the model with 4 layers unfrozen
-num_classes = len(np.unique(labels))
-print(f"{num_classes} different classes.")
-model = SentimentClassifier(bert_model, num_classes=num_classes, unfreeze_layers=4).to(device)
-optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-criterion = nn.CrossEntropyLoss().to(device)
+# Initialize the optimizer and loss function
+optimizer = AdamW(model.parameters(), lr=LEARNING_RATE)
+criterion = torch.nn.CrossEntropyLoss().to(device)
 
 # Initialize lists to store training and validation losses and accuracies
 train_losses = []
@@ -138,14 +85,14 @@ for epoch in range(EPOCHS):
     for batch in tqdm(train_loader, desc=f"Epoch {epoch + 1}/{EPOCHS}"):
         input_ids, attention_mask, labels = batch
         optimizer.zero_grad()
-        logits = model(input_ids, attention_mask)
-        loss = criterion(logits, labels)
+        outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+        loss = outputs.loss
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
         
         # Calculate training accuracy
-        _, predicted = torch.max(logits, 1)
+        _, predicted = torch.max(outputs.logits, 1)
         total_train += labels.size(0)
         correct_train += (predicted == labels).sum().item()
 
@@ -166,8 +113,8 @@ for epoch in range(EPOCHS):
     with torch.no_grad():
         for batch in val_loader:
             input_ids, attention_mask, labels = batch
-            logits = model(input_ids, attention_mask)
-            predictions = torch.argmax(logits, dim=1)
+            outputs = model(input_ids, attention_mask=attention_mask)
+            predictions = torch.argmax(outputs.logits, dim=1)
             total_val += labels.size(0)
             correct_val += (predictions == labels).sum().item()
 
@@ -180,8 +127,8 @@ for epoch in range(EPOCHS):
     total_val_loss = 0
     for val_batch in DataLoader(TensorDataset(X_test_ids.to(device), X_test_masks.to(device), torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE):
         val_input_ids, val_attention_mask, val_labels = val_batch
-        val_logits = model(val_input_ids, val_attention_mask)
-        val_loss = criterion(val_logits, val_labels)
+        val_outputs = model(val_input_ids, val_attention_mask)
+        val_loss = criterion(val_outputs.logits, val_labels)
         total_val_loss += val_loss.item()
     
     avg_val_loss = total_val_loss / len(DataLoader(TensorDataset(X_test_ids, X_test_masks, torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE))
@@ -194,7 +141,7 @@ for epoch in range(EPOCHS):
         best_val_loss = avg_val_loss
         wait = 0  # Reset the wait counter since there's improvement
         # save model
-        model.save_model(path_to_model)
+        model.save_pretrained(path_to_model)
 
     else:
         wait += 1
@@ -203,7 +150,7 @@ for epoch in range(EPOCHS):
             break  # Stop training
 
 # Load the best model from the saved checkpoint
-model.load_model(path_to_model)
+model = BertForSequenceClassification.from_pretrained(path_to_model)
 
 # Evaluate the model on the test set
 model.eval()
@@ -212,8 +159,8 @@ total_test = 0
 with torch.no_grad():
     for batch in DataLoader(TensorDataset(X_test_ids, X_test_masks, torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE):
         input_ids, attention_mask, labels = batch
-        logits = model(input_ids, attention_mask)
-        predictions = torch.argmax(logits, dim=1)
+        outputs = model(input_ids, attention_mask=attention_mask)
+        predictions = torch.argmax(outputs.logits, dim=1)
         total_test += labels.size(0)
         correct_test += (predictions == labels).sum().item()
 
