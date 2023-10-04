@@ -14,7 +14,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 path_to_model = './models/bert_amazon_food_review/'
-path_to_file = "./dataset/" + "finefoods.txt"
+path_to_file = "./dataset/" + "test.txt"
 
 texts, labels = load_and_preprocess_data(path_to_file)
 
@@ -27,6 +27,7 @@ EPOCHS = 15
 # Load a pre-trained BERT tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 bert_model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=5).to(device)
+print(bert_model)
 
 # Tokenize and pad sequences
 def tokenize_and_pad(texts, tokenizer, max_length):
