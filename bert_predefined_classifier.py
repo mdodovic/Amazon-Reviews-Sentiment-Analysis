@@ -1,10 +1,9 @@
 import torch
-from transformers import BertForSequenceClassification, BertTokenizer
+from transformers import BertForSequenceClassification, BertTokenizer, AdamW
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import numpy as np
 from tqdm import tqdm
+from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
 import os
 
@@ -13,186 +12,155 @@ from dataloader import load_and_preprocess_data
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-path_to_model = './models/bert_amazon_food_review/'
+path_to_model = './models/bert_amazon_food_review222_drive'
 path_to_file = "./dataset/" + "test.txt"
 
-texts, labels = load_and_preprocess_data(path_to_file)
+path = path_to_file
+#path = './drive/MyDrive/TwitterSentimentAnalysis/finefoods.txt'
+# Initialize empty lists to store scores and texts
+scores = []
+texts = []
 
-# Define hyperparameters
-MAX_SEQ_LENGTH = 128
-BATCH_SIZE = 32
-LEARNING_RATE = 2e-5  # Adjusted learning rate for BERT
-EPOCHS = 15
+# Open and read the file
+with open(path, 'r', encoding='utf-8') as file:
+    lines = file.readlines()
 
-# Load a pre-trained BERT tokenizer and model
+# Initialize variables to store temporary data
+current_score = None
+current_text = []
+
+# Process each line in the file
+for line in lines:
+    line = line.strip()
+
+    # If the line starts with "review/score:", extract the score
+    if line.startswith('review/score:'):
+        current_score = float(line.split(': ')[1])
+    # If the line starts with "review/text:", extract the text
+    elif line.startswith('review/text:'):
+        current_text.append(line.split(': ')[1])
+    # If the line is empty, it indicates the end of a review block
+    elif not line:
+        # Join the lines of the review text and append to the texts list
+        if current_score is not None and current_text:
+            scores.append(current_score)
+            texts.append(' '.join(current_text))
+
+        # Reset variables for the next review
+        current_score = None
+        current_text = []
+
+# Now you have the review scores in the 'scores' list and the review texts in the 'texts' list
+# Printing the first 5 review scores and texts
+for i in range(5):
+    print(f"Review {i + 1} - Score: {scores[i]}, Text: {texts[i]}\n")
+print(len(scores))
+print(len(texts))
+
+
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-bert_model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=5).to(device)
-print(bert_model)
 
-# Tokenize and pad sequences
-def tokenize_and_pad(texts, tokenizer, max_length):
-    input_ids = []
-    attention_masks = []
-    for text in texts:
-        encoded = tokenizer.encode_plus(
-            text,
-            add_special_tokens=True,
-            max_length=max_length,
-            padding='max_length',
-            return_tensors='pt',
-            return_attention_mask=True,
-            truncation=True,
-        ).to(device) 
-        input_ids.append(encoded['input_ids'])
-        attention_masks.append(encoded['attention_mask'])
-    return torch.cat(input_ids, dim=0), torch.cat(attention_masks, dim=0)
+# Load the pretrained BERT model and tokenizer
+#tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=6)
+model = model.to(device)
 
-# Split data into training, validation, and test sets
-X_train, X_temp, y_train, y_temp = train_test_split(texts, labels, test_size=0.02, random_state=42)
-X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
 
-X_train_ids, X_train_masks = tokenize_and_pad(X_train, tokenizer, MAX_SEQ_LENGTH)
-X_val_ids, X_val_masks = tokenize_and_pad(X_val, tokenizer, MAX_SEQ_LENGTH)
-X_test_ids, X_test_masks = tokenize_and_pad(X_test, tokenizer, MAX_SEQ_LENGTH)
+# Tokenize your text data and pad or truncate to a consistent length
+max_length = 128  # Adjust the maximum sequence length as needed
 
-# Create DataLoader for training and validation
-train_data = TensorDataset(X_train_ids.to(device), X_train_masks.to(device), torch.tensor(y_train, dtype=torch.long).to(device))
-train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
+tokenized_texts = [tokenizer(
+    text,
+    padding='max_length',  # Pad to the specified max length
+    truncation=True,        # Truncate if the text exceeds max length
+    max_length=max_length,
+    return_tensors='pt'
+) for text in texts]
 
-val_data = TensorDataset(X_val_ids.to(device), X_val_masks.to(device), torch.tensor(y_val, dtype=torch.long).to(device))
-val_loader = DataLoader(val_data, batch_size=BATCH_SIZE)
+# Convert sentiment scores to labels (assuming 6 sentiment classes)
+label_encoder = LabelEncoder()
+labels = label_encoder.fit_transform(scores)
 
-# Initialize the optimizer and criterion
-optimizer = torch.optim.AdamW(bert_model.parameters(), lr=LEARNING_RATE)
-criterion = torch.nn.CrossEntropyLoss().to(device)
+# Combine tokenized inputs into tensors
+input_ids = torch.cat([text['input_ids'] for text in tokenized_texts], dim=0).to(device)
+attention_mask = torch.cat([text['attention_mask'] for text in tokenized_texts], dim=0).to(device)
+labels = torch.tensor(labels).to(device)
 
-# Initialize lists to store training and validation losses and accuracies
-train_losses = []
-validation_losses = []
-train_accuracies = []
-validation_accuracies = []
+# Split the data into train and validation sets
+train_inputs, val_inputs, train_masks, val_masks, train_labels, val_labels = train_test_split(
+    input_ids, attention_mask, labels, test_size=0.2, random_state=420
+)
 
-# Early stopping variables
-best_val_loss = float('inf')  # Initialize with a large value
-patience = 5  # Number of epochs to wait for improvement
-wait = 0  # Counter for consecutive epochs without improvement
+# Create data loaders for training and validation data
+batch_size = 64  # Adjust the batch size as needed
+train_dataset = TensorDataset(train_inputs, train_masks, train_labels)
+train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+val_dataset = TensorDataset(val_inputs, val_masks, val_labels)
+val_data_loader = DataLoader(val_dataset, batch_size=batch_size)
+
+# Define optimizer and loss function
+optimizer = AdamW(model.parameters(), lr=1e-5)
+loss_fn = torch.nn.CrossEntropyLoss()
+
+# ... (previous code)
 
 # Training loop
-for epoch in range(EPOCHS):
-    bert_model.train()
+num_epochs = 10  # Adjust the number of epochs as needed
+print_every = 100  # Print training loss every `print_every` steps
+
+for epoch in range(num_epochs):
+    print(f"Epoch {epoch + 1}/{num_epochs}")
+
+    # Training loop
+    model.train()
     total_loss = 0
-    correct_train = 0
-    total_train = 0
-    
-    for batch in tqdm(train_loader, desc=f"Epoch {epoch + 1}/{EPOCHS}"):
-        input_ids, attention_mask, labels = batch
+
+    # Wrap the data loader with tqdm
+    for step, batch in enumerate(tqdm(train_data_loader, desc="Training")):
         optimizer.zero_grad()
-        outputs = bert_model(input_ids, attention_mask=attention_mask, labels=labels)
+        input_ids = batch[0]
+        attention_mask = batch[1]
+        labels = batch[2]
+        outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
         loss = outputs.loss
         loss.backward()
         optimizer.step()
+
         total_loss += loss.item()
-        
-        # Calculate training accuracy
-        _, predicted = torch.max(outputs.logits, 1)
-        total_train += labels.size(0)
-        correct_train += (predicted == labels).sum().item()
 
-    # Calculate and print average loss and accuracy for this epoch
-    avg_loss = total_loss / len(train_loader)
-    train_accuracy = 100 * correct_train / total_train
-    
-    print(f"Epoch {epoch + 1}/{EPOCHS}")
-    print(f"Training loss: {avg_loss:.4f}, Training Accuracy: {train_accuracy:.2f}%")
-    
-    train_losses.append(avg_loss)
-    train_accuracies.append(train_accuracy)
+        if (step + 1) % print_every == 0:
+            avg_loss = total_loss / (step + 1)
+            print(f"Step {step + 1}/{len(train_data_loader)} - Loss: {avg_loss:.4f}")
 
-    # Evaluation on the validation set
-    bert_model.eval()
-    correct_val = 0
-    total_val = 0
-    with torch.no_grad():
-        for batch in val_loader:
-            input_ids, attention_mask, labels = batch
-            outputs = bert_model(input_ids, attention_mask=attention_mask)
-            predictions = torch.argmax(outputs.logits, dim=1)
-            total_val += labels.size(0)
-            correct_val += (predictions == labels).sum().item()
+    avg_train_loss = total_loss / len(train_data_loader)
+    print(f"Average training loss: {avg_train_loss:.4f}")
 
-    # Calculate accuracy on the validation set
-    accuracy = 100 * correct_val / total_val
-    validation_accuracies.append(accuracy)
+    # Validation loop
+    model.eval()
+    val_loss = 0
+    correct_predictions = 0
+    total_samples = 0
+    for batch in val_data_loader:
+        with torch.no_grad():
+            input_ids = batch[0]
+            attention_mask = batch[1]
+            labels = batch[2]
+            outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+            loss = outputs.loss
 
-    # Calculate and store validation loss
-    bert_model.train()
-    total_val_loss = 0
-    for val_batch in DataLoader(TensorDataset(X_test_ids.to(device), X_test_masks.to(device), torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE):
-        val_input_ids, val_attention_mask, val_labels = val_batch
-        val_outputs = bert_model(val_input_ids, val_attention_mask)
-        val_loss = criterion(val_outputs.logits, val_labels)
-        total_val_loss += val_loss.item()
-    
-    avg_val_loss = total_val_loss / len(DataLoader(TensorDataset(X_test_ids, X_test_masks, torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE))
-    validation_losses.append(avg_val_loss)
+            val_loss += loss.item()
 
-    print(f"Validation loss: {avg_val_loss:.4f}, Validation Accuracy: {accuracy:.2f}%")
+            # Calculate accuracy
+            logits = outputs.logits
+            predicted_labels = torch.argmax(logits, dim=1)
+            correct_predictions += (predicted_labels == labels).sum().item()
+            total_samples += len(labels)
 
-    # Early stopping check
-    if avg_val_loss < best_val_loss:
-        best_val_loss = avg_val_loss
-        wait = 0  # Reset the wait counter since there's improvement
-        # Save model
-        bert_model.save_pretrained(path_to_model)
+    avg_val_loss = val_loss / len(val_data_loader)
+    val_accuracy = correct_predictions / total_samples * 100
+    print(f"Validation loss: {avg_val_loss:.4f} - Validation accuracy: {val_accuracy:.2f}%")
+    # Save the fine-tuned model
+    model.save_pretrained(path_to_model)
 
-    else:
-        wait += 1
-        if wait >= patience:
-            print(f"Early stopping after {epoch + 1} epochs without improvement.")
-            break  # Stop training
-
-# Load the best model from the saved checkpoint
-bert_model = BertForSequenceClassification.from_pretrained(path_to_model, num_labels=5).to(device)
-
-# Evaluate the model on the test set
-bert_model.eval()
-correct_test = 0
-total_test = 0
-with torch.no_grad():
-    for batch in DataLoader(TensorDataset(X_test_ids, X_test_masks, torch.tensor(y_test, dtype=torch.long).to(device)), batch_size=BATCH_SIZE):
-        input_ids, attention_mask, labels = batch
-        outputs = bert_model(input_ids, attention_mask=attention_mask)
-        predictions = torch.argmax(outputs.logits, dim=1)
-        total_test += labels.size(0)
-        correct_test += (predictions == labels).sum().item()
-
-# Calculate accuracy on the test set
-test_accuracy = 100 * correct_test / total_test
-print(f"Test Accuracy: {test_accuracy:.2f}%")
-
-# Plot the training and validation loss and accuracy
-plt.figure(figsize=(12, 6))
-
-# Loss Plot
-plt.subplot(1, 2, 1)
-plt.plot(range(1, len(train_losses) + 1), train_losses, label='Training Loss', marker='o')
-plt.plot(range(1, len(validation_losses) + 1), validation_losses, label='Validation Loss', marker='o')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.legend()
-plt.title('Training and Validation Loss')
-plt.grid(True)
-
-# Accuracy Plot
-plt.subplot(1, 2, 2)
-plt.plot(range(1, len(train_accuracies) + 1), train_accuracies, label='Training Accuracy', marker='o')
-plt.plot(range(1, len(validation_accuracies) + 1), validation_accuracies, label='Validation Accuracy', marker='o')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend()
-plt.title('Training and Validation Accuracy')
-plt.grid(True)
-
-plt.tight_layout()
-plt.savefig("BERT.png", dpi=90)
-plt.show()
+# After training, you can save or deploy the fine-tuned model for inference
