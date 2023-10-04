@@ -71,7 +71,7 @@ for epoch in range(num_epochs):
     all_val_preds = []
     all_val_labels = []
     with torch.no_grad():
-        for val_batch in tqdm(val_loader, desc=f'Epoch {epoch + 1} Validation'):
+        for val_batch in val_loader:
             val_input_ids, val_attention_mask, val_labels = val_batch
             val_input_ids, val_attention_mask, val_labels = val_input_ids.to(device), val_attention_mask.to(device), val_labels.to(device)
 
