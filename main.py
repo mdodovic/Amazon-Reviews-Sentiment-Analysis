@@ -28,14 +28,16 @@ def main():
     input_ids = []
     attention_masks = []
 
-    for tokens in tokenized_reviews:
-        input_ids.append(tokens['input_ids'])
-        attention_masks.append(tokens['attention_mask'])
+    max_length = max(tensor['input_ids'].shape[1] for tensor in tokenized_reviews)
 
-    # Ensure the input tensors are of the same size
-    max_length = max(len(tensor) for tensor in input_ids)
-    input_ids = torch.stack([torch.cat([tensor, torch.zeros(max_length - len(tensor))], dim=0) for tensor in input_ids])
-    attention_masks = torch.stack([torch.cat([tensor, torch.zeros(max_length - len(tensor))], dim=0) for tensor in attention_masks])
+    for tokens in tokenized_reviews:
+        padding_length = max_length - tokens['input_ids'].shape[1]
+        input_ids.append(torch.nn.functional.pad(tokens['input_ids'], (0, padding_length), value=0))
+        attention_masks.append(torch.nn.functional.pad(tokens['attention_mask'], (0, padding_length), value=0))
+
+    # Stack the tensors
+    input_ids = torch.stack(input_ids)
+    attention_masks = torch.stack(attention_masks)
 
     # Convert sentiments to numerical labels
     label_encoder = LabelEncoder()
