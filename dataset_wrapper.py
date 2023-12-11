@@ -3,30 +3,24 @@ from sklearn.preprocessing import LabelEncoder
 from transformers import BertTokenizer
 
 
-def read_dataset(path_to_dataset: str):
-
-    # Initialize lists to store scores and reviews
-    scores = []
+# Function to read the dataset
+def read_dataset(path):
     reviews = []
+    scores = []
 
-    # Open the text file for reading
-    with open(path_to_dataset, 'r') as file:
+    with open(path, 'r') as file:
         lines = file.readlines()
 
-    # Process the lines to extract scores and reviews
     current_score = None
     current_review = ""
 
     for line in lines:
         line = line.strip()
         if line.startswith("review/score:"):
-            # Extract score
-            current_score = int(float(line.split(":")[1].strip()))
-        elif line.startswith("review/text:"):
-            # Extract review
-            current_review = line.split(":")[1].strip()
-            # Add the current score and review to the lists
+            current_score = float(line.split(":")[1].strip())
             scores.append(current_score)
+        elif line.startswith("review/text:"):
+            current_review = line.split(":")[1].strip()
             reviews.append(current_review)
 
     return reviews, scores
