@@ -62,8 +62,10 @@ def main():
     for epoch in range(epochs):
         model.train()
         for batch in dataloader:
-            batch = tuple(t.to(device) for t in batch)
-            inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
+            input_ids_batch, attention_mask_batch, labels_batch = batch
+            inputs = {'input_ids': input_ids_batch.to(device),
+                    'attention_mask': attention_mask_batch.to(device),
+                    'labels': labels_batch.to(device)}
             outputs = model(**inputs)
             loss = outputs.loss
             loss.backward()
@@ -79,7 +81,7 @@ def main():
         with torch.no_grad():
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         logits = outputs.logits
-        predicted_label = torch.argmax(logits).item()
+        predicted_label = torch.argmax(logits, dim=1).item()
         predicted_sentiment = label_encoder.classes_[predicted_label]
         return predicted_sentiment
 
@@ -87,6 +89,7 @@ def main():
     sample_review = "This product is great! I love it."
     predicted_sentiment = predict_sentiment(sample_review)
     print(f"Predicted Sentiment: {predicted_sentiment}")
+
 
 if __name__ == "__main__":
     main()
