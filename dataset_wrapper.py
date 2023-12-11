@@ -21,7 +21,7 @@ def read_dataset(path_to_dataset: str):
         line = line.strip()
         if line.startswith("review/score:"):
             # Extract score
-            current_score = float(line.split(":")[1].strip())
+            current_score = int(float(line.split(":")[1].strip()))
         elif line.startswith("review/text:"):
             # Extract review
             current_review = line.split(":")[1].strip()
@@ -37,10 +37,10 @@ def preprocess_for_bert(reviews, scores):
     tokenized_reviews = []
 
     label_encoder = LabelEncoder()
-    encoded_scores = label_encoder.fit_transform([1 if s < 3 else 2 if s == 3 else 3 for s in scores])
+    encoded_scores = label_encoder.fit_transform([0 if s <= 2 else 1 if s == 3 else 2 for s in scores])
 
     for review, encoded_score in zip(reviews, encoded_scores):
-        sentiment = "positive" if encoded_score == 2 else "negative" if encoded_score == 0 else "neutral"
+        sentiment = "negative" if encoded_score == 0 else "neutral" if encoded_score == 1 else "positive"
         sentiments.append(sentiment)
 
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')

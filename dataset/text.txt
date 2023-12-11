@@ -42,3 +42,12 @@ review/score: 5.0
 review/time: 1350777600
 review/summary: Great taffy
 review/text: Great taffy at a great price.  There was a wide assortment of yummy taffy.  Delivery was very quick.  If your a taffy lover, this is a deal.
+
+product/productId: B001EO5QW8
+review/userId: A39Z97950MCTQE
+review/profileName: K. A. Freel
+review/helpfulness: 0/0
+review/score: 3.0
+review/time: 1205193600
+review/summary: Hearty Oatmeal
+review/text: This seems a little more wholesome than some of the supermarket brands, but it is somewhat mushy and doesn't have quite as much flavor either.  It didn't pass muster with my kids, so I probably won't buy it again.
