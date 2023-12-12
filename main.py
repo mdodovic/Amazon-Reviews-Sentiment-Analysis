@@ -1,95 +1,84 @@
-import torch
-from torch.utils.data import DataLoader, TensorDataset
-from transformers import BertTokenizer, BertForSequenceClassification, AdamW
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-
-from dataset_wrapper import read_dataset, preprocess_for_bert
-
 path_to_dataset = 'C:/Users/matij/Desktop/ReviewsML/dataset/text.txt'
 
+from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
+import torch
+from torch.utils.data import Dataset
+from sklearn.model_selection import train_test_split
 
-def main():
+# Assuming the dataset_wrapper.py has been correctly imported
+from dataset_wrapper import read_dataset
 
-    reviews, scores = read_dataset(path_to_dataset)
-    sentiments, tokenized_reviews = preprocess_for_bert(reviews, scores)
+# Custom dataset class for BERT
+class SentimentDataset(Dataset):
+    def __init__(self, reviews, scores, tokenizer, max_len=512):
+        self.reviews = reviews
+        self.scores = scores
+        self.tokenizer = tokenizer
+        self.max_len = max_len
 
-    # Print the first 10 reviews
-    for i  in range(len(reviews)):
-        print(scores[i], ":", reviews[i], "->", sentiments[i])
+    def __len__(self):
+        return len(self.reviews)
 
-    print("BERT!")
-    # Load pre-trained BERT model and tokenizer
-    # Check if the number of reviews and scores match
-    if len(reviews) != len(scores):
-        raise ValueError("Number of reviews and scores must be the same.")
+    def __getitem__(self, idx):
+        review = str(self.reviews[idx])
+        score = self.scores[idx]
 
-    # Tokenize and encode the reviews
-    input_ids = []
-    attention_masks = []
+        encoding = self.tokenizer.encode_plus(
+            review,
+            add_special_tokens=True,
+            max_length=self.max_len,
+            return_token_type_ids=False,
+            padding='max_length',
+            truncation=True,
+            return_attention_mask=True,
+            return_tensors='pt',
+        )
 
-    max_length = max(tensor['input_ids'].shape[1] for tensor in tokenized_reviews)
+        return {
+            'input_ids': encoding['input_ids'].flatten(),
+            'attention_mask': encoding['attention_mask'].flatten(),
+            'labels': torch.tensor(score, dtype=torch.long)
+        }
 
-    for tokens in tokenized_reviews:
-        padding_length = max_length - tokens['input_ids'].shape[1]
-        input_ids.append(torch.nn.functional.pad(tokens['input_ids'], (0, padding_length), value=0))
-        attention_masks.append(torch.nn.functional.pad(tokens['attention_mask'], (0, padding_length), value=0))
+# Read and preprocess the dataset
+reviews, scores = read_dataset(path_to_dataset)  # Replace with your dataset path
 
-    # Stack the tensors
-    input_ids = torch.stack(input_ids)
-    attention_masks = torch.stack(attention_masks)
+# Tokenizer for BERT
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-    # Convert sentiments to numerical labels
-    label_encoder = LabelEncoder()
-    encoded_labels = label_encoder.fit_transform(sentiments)
-    labels = torch.tensor(encoded_labels)
+# Splitting the dataset into training and validation sets
+train_reviews, val_reviews, train_scores, val_scores = train_test_split(reviews, scores, test_size=0.1)
 
-    # Load pre-trained BERT model and tokenizer
-    model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+# Create dataset objects for training and validation
+train_dataset = SentimentDataset(train_reviews, train_scores, tokenizer)
+val_dataset = SentimentDataset(val_reviews, val_scores, tokenizer)
 
-    # Create a DataLoader for training
-    dataset = TensorDataset(input_ids, attention_masks, labels)
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+# Load pre-trained BERT model for sequence classification
+# Adjust num_labels to match the number of sentiment classes in your dataset
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)
 
-    # Training settings
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model.to(device)
-    optimizer = AdamW(model.parameters(), lr=2e-5)
+# Training arguments
+training_args = TrainingArguments(
+    output_dir='./results',
+    num_train_epochs=3,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    warmup_steps=500,
+    weight_decay=0.01,
+    logging_dir='./logs',
+)
 
-    # Training loop (you may need to adjust this based on your specific use case)
-    epochs = 3
-    for epoch in range(epochs):
-        model.train()
-        for batch in dataloader:
-            input_ids_batch, attention_mask_batch, labels_batch = batch
-            inputs = {'input_ids': input_ids_batch.to(device),
-                    'attention_mask': attention_mask_batch.to(device),
-                    'labels': labels_batch.to(device)}
-            outputs = model(**inputs)
-            loss = outputs.loss
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
+# Trainer
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=val_dataset
+)
 
-    # Function to predict sentiment
-    def predict_sentiment(review):
-        model.eval()
-        encoded_review = tokenizer(review, padding=True, truncation=True, max_length=512, return_tensors='pt')
-        input_ids = encoded_review['input_ids'].to(device)
-        attention_mask = encoded_review['attention_mask'].to(device)
-        with torch.no_grad():
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        logits = outputs.logits
-        predicted_label = torch.argmax(logits, dim=1).item()
-        predicted_sentiment = label_encoder.classes_[predicted_label]
-        return predicted_sentiment
+# Train the model
+trainer.train()
 
-    # Example usage for prediction
-    sample_review = "This product is great! I love it."
-    predicted_sentiment = predict_sentiment(sample_review)
-    print(f"Predicted Sentiment: {predicted_sentiment}")
-
-
-if __name__ == "__main__":
-    main()
+# Evaluate the model (optional)
+evaluation_results = trainer.evaluate()
+print(evaluation_results)
