@@ -43,18 +43,19 @@ class SentimentDataset(Dataset):
 # Read and preprocess the dataset
 reviews, scores = read_dataset(path_to_dataset)  # Replace with your dataset path
 
+# Splitting the dataset into training, validation, and test sets
+train_reviews, temp_reviews, train_scores, temp_scores = train_test_split(reviews, scores, test_size=0.2, random_state=42)
+val_reviews, test_reviews, val_scores, test_scores = train_test_split(temp_reviews, temp_scores, test_size=0.5, random_state=42)
+
 # Tokenizer for BERT
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-# Splitting the dataset into training and validation sets
-train_reviews, val_reviews, train_scores, val_scores = train_test_split(reviews, scores, test_size=0.1)
-
-# Create dataset objects for training and validation
+# Create dataset objects for training, validation, and testing
 train_dataset = SentimentDataset(train_reviews, train_scores, tokenizer)
 val_dataset = SentimentDataset(val_reviews, val_scores, tokenizer)
+test_dataset = SentimentDataset(test_reviews, test_scores, tokenizer)
 
-# Load pre-trained BERT model for sequence classification
-# Adjust num_labels to match the number of sentiment classes in your dataset
+# BERT model for sequence classification with 3 classes
 model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)
 
 # Training arguments
@@ -79,6 +80,6 @@ trainer = Trainer(
 # Train the model
 trainer.train()
 
-# Evaluate the model (optional)
-evaluation_results = trainer.evaluate()
-print(evaluation_results)
+# Evaluate the model on the test set
+test_results = trainer.evaluate(test_dataset)
+print("Test Set Results:", test_results)
