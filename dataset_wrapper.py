@@ -3,27 +3,28 @@ from sklearn.preprocessing import LabelEncoder
 from transformers import BertTokenizer
 
 
-# Function to read the dataset
+# Modify the read_dataset function in your dataset_wrapper.py to include label conversion
 def read_dataset(path):
     reviews = []
-    scores = []
+    labels = []
 
     with open(path, 'r') as file:
-        lines = file.readlines()
+        for line in file:
+            if line.startswith('review/text:'):
+                review = line.split('review/text:')[1].strip()
+                reviews.append(review)
+            elif line.startswith('review/score:'):
+                score = float(line.split('review/score:')[1].strip())
+                # Convert scores to labels
+                if score < 3.0:
+                    label = 0  # Negative
+                elif score == 3.0:
+                    label = 1  # Neutral
+                else:
+                    label = 2  # Positive
+                labels.append(label)
 
-    current_score = None
-    current_review = ""
-
-    for line in lines:
-        line = line.strip()
-        if line.startswith("review/score:"):
-            current_score = float(line.split(":")[1].strip())
-            scores.append(current_score)
-        elif line.startswith("review/text:"):
-            current_review = line.split(":")[1].strip()
-            reviews.append(current_review)
-
-    return reviews, scores
+    return reviews, labels
 
 
 def preprocess_for_bert(reviews, scores):
