@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 from dataset_wrapper import read_dataset
 
 
-# Check if CUDA is available and set the device accordingly
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.device_count() > 0 else "cpu")
 print("Using device:", device)
 
 # Custom dataset class for BERT
@@ -49,8 +48,8 @@ class SentimentDataset(Dataset):
 class FineTuningConfig:
     def __init__(self):
         # Path to Dataset
-        self.dataset_path = 'dataset/text.txt' 
-        self.labels_num = 3 # Number of labels in the dataset
+        self.dataset_path = 'dataset/finefoods.txt' 
+        self.labels_num = 30 # Number of labels in the dataset
 
         # Model Training Parameters
         self.num_epochs = 3 # Number of training epochs
@@ -111,7 +110,9 @@ training_args = TrainingArguments(
     warmup_steps=config.warmup_steps,
     weight_decay=config.weight_decay,
     logging_dir=config.logging_dir,
-    evaluation_strategy="epoch"
+    evaluation_strategy="epoch",
+    save_strategy="epoch",  # Save the model at the end of each epoch
+    save_total_limit=1       # Keep only the most recent checkpoint
 )
 
 # Trainer
