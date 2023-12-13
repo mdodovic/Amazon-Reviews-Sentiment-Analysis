@@ -4,6 +4,9 @@ from transformers import BertTokenizer, BertForSequenceClassification, Trainer, 
 import torch
 from torch.utils.data import Dataset
 from sklearn.model_selection import train_test_split
+import numpy as np
+from sklearn.metrics import accuracy_score
+
 
 # Assuming the dataset_wrapper.py has been correctly imported
 from dataset_wrapper import read_dataset
@@ -40,6 +43,11 @@ class SentimentDataset(Dataset):
             'labels': torch.tensor(score, dtype=torch.long)
         }
 
+# Function to compute accuracy
+def compute_metrics(p):
+    preds = np.argmax(p.predictions, axis=1)
+    return {"accuracy": accuracy_score(p.label_ids, preds)}
+
 # Read and preprocess the dataset
 reviews, scores = read_dataset(path_to_dataset)  # Replace with your dataset path
 
@@ -67,19 +75,21 @@ training_args = TrainingArguments(
     warmup_steps=500,
     weight_decay=0.01,
     logging_dir='./logs',
+    evaluation_strategy="epoch"
 )
 
 # Trainer
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=val_dataset
+    compute_metrics=compute_metrics
 )
 
 # Train the model
+trainer.train_dataset = train_dataset
+trainer.eval_dataset = val_dataset
 trainer.train()
 
-# Evaluate the model on the test set
+# Evaluate the model on the test set	
 test_results = trainer.evaluate(test_dataset)
 print("Test Set Results:", test_results)
