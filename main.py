@@ -132,5 +132,5 @@ if valid_accuracy_set:
     plt.ylabel('Accuracy')
     plt.legend()
 
-plt.savefig('loss_accuracy.png')
+plt.savefig('loss_accuracy.png', dpi=90)
 plt.show()
