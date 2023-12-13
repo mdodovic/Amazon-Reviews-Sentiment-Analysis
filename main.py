@@ -1,4 +1,4 @@
-path_to_dataset = 'C:/Users/matij/Desktop/ReviewsML/dataset/text.txt'
+path_to_dataset = 'dataset/text.txt'
 
 from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
 import torch
@@ -6,6 +6,7 @@ from torch.utils.data import Dataset
 from sklearn.model_selection import train_test_split
 import numpy as np
 from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
 
 
 # Assuming the dataset_wrapper.py has been correctly imported
@@ -93,3 +94,43 @@ trainer.train()
 # Evaluate the model on the test set	
 test_results = trainer.evaluate(test_dataset)
 print("Test Set Results:", test_results)
+
+# Extracting the training history
+history = trainer.state.log_history
+
+# Initializing lists to store metrics
+train_loss_set = []
+valid_loss_set = []
+train_accuracy_set = []
+valid_accuracy_set = []
+
+# Extracting loss and accuracy for each epoch
+for entry in history:
+    if 'loss' in entry:
+        train_loss_set.append(entry['loss'])
+    elif 'eval_loss' in entry:
+        valid_loss_set.append(entry['eval_loss'])
+    if 'eval_accuracy' in entry:
+        valid_accuracy_set.append(entry['eval_accuracy'])
+
+# Plotting training and validation loss
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 2, 1)
+plt.plot(train_loss_set, label='Training loss')
+plt.plot(valid_loss_set, label='Validation loss')
+plt.title('Training and Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+
+# Plotting training and validation accuracy (if recorded)
+if valid_accuracy_set:
+    plt.subplot(1, 2, 2)
+    plt.plot(valid_accuracy_set, label='Validation accuracy')
+    plt.title('Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+
+plt.savefig('loss_accuracy.png')
+plt.show()
