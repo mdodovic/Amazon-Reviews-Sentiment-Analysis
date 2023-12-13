@@ -8,5 +8,5 @@ echo Activating virtual environment %VENV_NAME%...
 call %VENV_NAME%\Scripts\activate
 
 echo Installing necessary packages ...
-pip install -r requirements.txt
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
+pip install -r requirements.txt
