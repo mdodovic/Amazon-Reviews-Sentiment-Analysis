@@ -44,10 +44,25 @@ class SentimentDataset(Dataset):
             'labels': torch.tensor(score, dtype=torch.long)
         }
 
+class FineTuningConfig:
+    def __init__(self):
+        self.num_epochs = 3
+        self.train_batch_size = 8
+        self.eval_batch_size = 8
+        self.learning_rate = 5e-5
+        self.warmup_steps = 500
+        self.weight_decay = 0.01
+        self.max_seq_length = 512
+        self.output_dir = './results'
+        self.logging_dir = './logs'
+
+
 # Function to compute accuracy
 def compute_metrics(p):
     preds = np.argmax(p.predictions, axis=1)
     return {"accuracy": accuracy_score(p.label_ids, preds)}
+
+config = FineTuningConfig()
 
 # Read and preprocess the dataset
 reviews, scores = read_dataset(path_to_dataset)  # Replace with your dataset path
@@ -60,22 +75,24 @@ val_reviews, test_reviews, val_scores, test_scores = train_test_split(temp_revie
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
 # Create dataset objects for training, validation, and testing
-train_dataset = SentimentDataset(train_reviews, train_scores, tokenizer)
-val_dataset = SentimentDataset(val_reviews, val_scores, tokenizer)
-test_dataset = SentimentDataset(test_reviews, test_scores, tokenizer)
+train_dataset = SentimentDataset(train_reviews, train_scores, tokenizer, max_len=config.max_seq_length)
+val_dataset = SentimentDataset(val_reviews, val_scores, tokenizer, max_len=config.max_seq_length)
+test_dataset = SentimentDataset(test_reviews, test_scores, tokenizer, max_len=config.max_seq_length)
 
 # BERT model for sequence classification with 3 classes
 model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)
 
+
 # Training arguments
 training_args = TrainingArguments(
-    output_dir='./results',
-    num_train_epochs=3,
-    per_device_train_batch_size=8,
-    per_device_eval_batch_size=8,
-    warmup_steps=500,
-    weight_decay=0.01,
-    logging_dir='./logs',
+    output_dir=config.output_dir,
+    num_train_epochs=config.num_epochs,
+    per_device_train_batch_size=config.train_batch_size,
+    per_device_eval_batch_size=config.eval_batch_size,
+    learning_rate=config.learning_rate,
+    warmup_steps=config.warmup_steps,
+    weight_decay=config.weight_decay,
+    logging_dir=config.logging_dir,
     evaluation_strategy="epoch"
 )
 
@@ -83,12 +100,12 @@ training_args = TrainingArguments(
 trainer = Trainer(
     model=model,
     args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=val_dataset,
     compute_metrics=compute_metrics
 )
 
 # Train the model
-trainer.train_dataset = train_dataset
-trainer.eval_dataset = val_dataset
 trainer.train()
 
 # Evaluate the model on the test set	
