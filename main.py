@@ -6,9 +6,13 @@ import numpy as np
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 
-
 # Assuming the dataset_wrapper.py has been correctly imported
 from dataset_wrapper import read_dataset
+
+
+# Check if CUDA is available and set the device accordingly
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Using device:", device)
 
 # Custom dataset class for BERT
 class SentimentDataset(Dataset):
@@ -46,6 +50,7 @@ class FineTuningConfig:
     def __init__(self):
         # Path to Dataset
         self.dataset_path = 'dataset/text.txt' 
+        self.labels_num = 3 # Number of labels in the dataset
 
         # Model Training Parameters
         self.num_epochs = 3 # Number of training epochs
@@ -93,8 +98,8 @@ val_dataset = SentimentDataset(val_reviews, val_scores, tokenizer, max_len=confi
 test_dataset = SentimentDataset(test_reviews, test_scores, tokenizer, max_len=config.max_seq_length)
 
 # BERT model for sequence classification with 3 classes
-model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)
-
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=config.labels_num)
+model.to(device)
 
 # Training arguments
 training_args = TrainingArguments(
