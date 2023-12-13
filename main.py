@@ -1,5 +1,3 @@
-path_to_dataset = 'dataset/text.txt'
-
 from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
 import torch
 from torch.utils.data import Dataset
@@ -46,15 +44,26 @@ class SentimentDataset(Dataset):
 
 class FineTuningConfig:
     def __init__(self):
-        self.num_epochs = 3
-        self.train_batch_size = 8
-        self.eval_batch_size = 8
-        self.learning_rate = 5e-5
-        self.warmup_steps = 500
-        self.weight_decay = 0.01
-        self.max_seq_length = 512
-        self.output_dir = './results'
-        self.logging_dir = './logs'
+        # Path to Dataset
+        self.dataset_path = 'dataset/text.txt' 
+
+        # Model Training Parameters
+        self.num_epochs = 3 # Number of training epochs
+        self.train_batch_size = 8 # Batch size for training
+        self.eval_batch_size = 8 # Batch size for evaluation
+        self.learning_rate = 5e-5 # Learning rate for the optimizer
+        self.warmup_steps = 500 # Number of warmup steps for learning rate scheduler
+        self.weight_decay = 0.01 # Regularization parameter
+        self.max_seq_length = 512 # Max length of input sequences
+
+        # File Paths and Directories
+        self.output_dir = './results' # Directory to save the model
+        self.logging_dir = './logs'   # Directory to save logs
+
+        # Dataset Splitting Parameters
+        self.validation_split = 0.2  # Portion of the data for validation
+        self.test_split = 0.5        # Portion of the validation data for testing
+        self.random_state = 42       # Random state for reproducibility
 
 
 # Function to compute accuracy
@@ -65,11 +74,15 @@ def compute_metrics(p):
 config = FineTuningConfig()
 
 # Read and preprocess the dataset
-reviews, scores = read_dataset(path_to_dataset)  # Replace with your dataset path
+reviews, scores = read_dataset(config.dataset_path)
 
-# Splitting the dataset into training, validation, and test sets
-train_reviews, temp_reviews, train_scores, temp_scores = train_test_split(reviews, scores, test_size=0.2, random_state=42)
-val_reviews, test_reviews, val_scores, test_scores = train_test_split(temp_reviews, temp_scores, test_size=0.5, random_state=42)
+# Splitting the dataset
+train_reviews, temp_reviews, train_scores, temp_scores = train_test_split(
+    reviews, scores, test_size=config.validation_split, random_state=config.random_state
+)
+val_reviews, test_reviews, val_scores, test_scores = train_test_split(
+    temp_reviews, temp_scores, test_size=config.test_split, random_state=config.random_state
+)
 
 # Tokenizer for BERT
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
