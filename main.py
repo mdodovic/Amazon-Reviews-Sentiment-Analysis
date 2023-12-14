@@ -60,6 +60,14 @@ class FineTuningConfig:
         self.weight_decay = 0.01 # Regularization parameter
         self.max_seq_length = 512 # Max length of input sequences
 
+        # Strategy and steps
+        self.log_and_eval_strategy = 'steps'
+        self.log_and_eval_steps = 500  # Choose a value that suits your training regimen
+        
+        self.save_strategy = 'steps'
+        self.save_steps = 500  # Choose a value that suits your training regimen
+        self.save_total_limit = 1 
+
         # File Paths and Directories
         self.output_dir = './results' # Directory to save the model
         self.logging_dir = './logs'   # Directory to save logs
@@ -100,7 +108,7 @@ test_dataset = SentimentDataset(test_reviews, test_scores, tokenizer, max_len=co
 model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=config.labels_num)
 model.to(device)
 
-# Training arguments
+# Update the TrainingArguments with the new strategies
 training_args = TrainingArguments(
     output_dir=config.output_dir,
     num_train_epochs=config.num_epochs,
@@ -110,9 +118,13 @@ training_args = TrainingArguments(
     warmup_steps=config.warmup_steps,
     weight_decay=config.weight_decay,
     logging_dir=config.logging_dir,
-    evaluation_strategy="epoch",
-    save_strategy="epoch",  # Save the model at the end of each epoch
-    save_total_limit=1       # Keep only the most recent checkpoint
+    evaluation_strategy=config.log_and_eval_strategy,
+    eval_steps=config.log_and_eval_steps,
+    logging_strategy=config.log_and_eval_strategy,
+    logging_steps=config.log_and_eval_steps,
+    save_strategy=config.save_strategy,
+    save_steps=config.save_steps,
+    save_total_limit=config.save_total_limit
 )
 
 # Trainer
