@@ -81,7 +81,7 @@ class SentimentDataset(Dataset):
 class FineTuningConfig:
     def __init__(self):
         # Path to Dataset
-        self.dataset_path = 'dataset/text.txt' 
+        self.dataset_path = 'dataset/finefoods.txt' 
         self.labels_num = 3 # Number of labels in the dataset
 
         # Model Training Parameters
@@ -89,16 +89,16 @@ class FineTuningConfig:
         self.train_batch_size = 32 # Batch size for training
         self.eval_batch_size = 32 # Batch size for evaluation
         self.learning_rate = 5e-5 # Learning rate for the optimizer
-        self.warmup_steps = 1 # Number of warmup steps for learning rate scheduler
+        self.warmup_steps = 500 # Number of warmup steps for learning rate scheduler
         self.weight_decay = 0.01 # Regularization parameter
         self.max_seq_length = 512 # Max length of input sequences
 
         # Strategy and steps
         self.log_and_eval_strategy = 'steps'
-        self.log_and_eval_steps = 1  # Choose a value that suits your training regimen
+        self.log_and_eval_steps = 500  # Choose a value that suits your training regimen
         
         self.save_strategy = 'steps'
-        self.save_steps = 1  # Choose a value that suits your training regimen
+        self.save_steps = 500  # Choose a value that suits your training regimen
         self.save_total_limit = 1 
 
         # File Paths and Directories

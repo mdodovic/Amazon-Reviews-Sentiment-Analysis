@@ -30,7 +30,7 @@ def read_dataset(path):
 
 
 # Use the read_dataset function to get reviews and labels
-reviews, labels = read_dataset('dataset/text.txt')  # Replace with the actual path of your dataset
+reviews, labels = read_dataset('dataset/finefoods.txt')  # Replace with the actual path of your dataset
 
 # Count the frequency of each label
 label_counts = [labels.count(0), labels.count(1), labels.count(2)]
