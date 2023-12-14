@@ -49,12 +49,12 @@ class FineTuningConfig:
     def __init__(self):
         # Path to Dataset
         self.dataset_path = 'dataset/finefoods.txt' 
-        self.labels_num = 30 # Number of labels in the dataset
+        self.labels_num = 3 # Number of labels in the dataset
 
         # Model Training Parameters
         self.num_epochs = 3 # Number of training epochs
-        self.train_batch_size = 8 # Batch size for training
-        self.eval_batch_size = 8 # Batch size for evaluation
+        self.train_batch_size = 32 # Batch size for training
+        self.eval_batch_size = 32 # Batch size for evaluation
         self.learning_rate = 5e-5 # Learning rate for the optimizer
         self.warmup_steps = 500 # Number of warmup steps for learning rate scheduler
         self.weight_decay = 0.01 # Regularization parameter
