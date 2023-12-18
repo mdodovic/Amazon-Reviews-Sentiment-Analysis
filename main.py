@@ -1,11 +1,12 @@
 from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments, TrainerCallback
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Subset
 from sklearn.model_selection import train_test_split
 import numpy as np
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
+import random
 
 # Assuming the dataset_wrapper.py has been correctly imported
 from dataset_wrapper import read_dataset
@@ -16,22 +17,29 @@ print("Using device:", device)
 
 # Custom callback for training accuracy
 class TrainingAccuracyCallback(TrainerCallback):
-    def __init__(self, train_dataset, batch_size):
+    def __init__(self, train_dataset, batch_size, subset_size=1000):
         self.train_dataset = train_dataset
         self.batch_size = batch_size
+        self.subset_size = subset_size
         self.device = device
 
     def on_step_end(self, args, state, control, **kwargs):
         if state.global_step % args.logging_steps == 0 and state.global_step > 0:
-            model.eval()  # Set model to evaluation mode
+            # Randomly sample a subset of the training data
+            subset_indices = random.sample(range(len(self.train_dataset)), self.subset_size)
+            subset = Subset(self.train_dataset, subset_indices)
+
+            # DataLoader for the subset
+            subset_dataloader = DataLoader(subset, batch_size=self.batch_size, shuffle=False)
+
+            # Rest of the accuracy calculation code remains the same
+            model.eval()
             total_eval_accuracy = 0
             total_eval_steps = 0
-
-            for batch in tqdm(DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=False), desc="Accuracy Calculation"):
+            for batch in subset_dataloader:
                 batch = {k: v.to(self.device) for k, v in batch.items()}
                 with torch.no_grad():
                     outputs = model(**batch)
-
                 logits = outputs.logits
                 preds = torch.argmax(logits, dim=-1)
                 total_eval_accuracy += (preds == batch["labels"]).sum().item()
@@ -39,12 +47,11 @@ class TrainingAccuracyCallback(TrainerCallback):
 
             avg_train_accuracy = total_eval_accuracy / total_eval_steps
             print(f"Training accuracy (step {state.global_step}): {avg_train_accuracy:.4f}")
-
-            # Directly append the accuracy to the trainer's log history
             state.log_history.append({
                 "step": state.global_step,
                 "train_accuracy": avg_train_accuracy,
             })
+
 
 # Custom dataset class for BERT
 class SentimentDataset(Dataset):
@@ -95,10 +102,10 @@ class FineTuningConfig:
 
         # Strategy and steps
         self.log_and_eval_strategy = 'steps'
-        self.log_and_eval_steps = 500  # Choose a value that suits your training regimen
+        self.log_and_eval_steps = 2000  # Choose a value that suits your training regimen
         
         self.save_strategy = 'steps'
-        self.save_steps = 500  # Choose a value that suits your training regimen
+        self.save_steps = 2000  # Choose a value that suits your training regimen
         self.save_total_limit = 1 
 
         # File Paths and Directories
@@ -142,7 +149,7 @@ model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_l
 model.to(device)
 
 # Instantiate the training accuracy callback
-train_acc_callback = TrainingAccuracyCallback(train_dataset, config.train_batch_size)
+train_acc_callback = TrainingAccuracyCallback(train_dataset, config.train_batch_size, subset_size=1000)
 
 # Update the TrainingArguments with the new strategies
 training_args = TrainingArguments(
