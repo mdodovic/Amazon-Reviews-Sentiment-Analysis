@@ -109,6 +109,7 @@ class FineTuningConfig:
         # Path to Dataset
         self.dataset_path = 'dataset/finefoods.txt' 
         self.labels_num = 3 # Number of labels in the dataset
+        self.sampling_method = 'under'
 
         # Model Training Parameters
         self.num_epochs = 3 # Number of training epochs
@@ -128,7 +129,7 @@ class FineTuningConfig:
         self.save_total_limit = 1 
 
         # File Paths and Directories
-        self.output_dir = './results/weighted_loss' # Directory to save the model
+        self.output_dir = './results/OVERSAMPLE_MINORITY' # Directory to save the model
         self.logging_dir = './logs'   # Directory to save logs
 
         # Dataset Splitting Parameters
@@ -145,7 +146,7 @@ def compute_metrics(p):
 config = FineTuningConfig()
 
 # Read and preprocess the dataset
-reviews, scores = fetch_data(config.dataset_path)
+reviews, scores = fetch_data(config.dataset_path, config.sampling_method)
 
 # Splitting the dataset
 train_reviews, temp_reviews, train_scores, temp_scores = train_test_split(
@@ -238,5 +239,5 @@ plt.ylabel('Accuracy')
 plt.legend()
 
 plt.tight_layout()
-plt.savefig('training_validation_metrics_WEIGHTED_LOSS.png', dpi=100)
+plt.savefig('training_validation_metrics_OVERSAMPLE_MINORITY.png', dpi=100)
 plt.show()
