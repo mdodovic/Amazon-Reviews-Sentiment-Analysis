@@ -1,5 +1,6 @@
 from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments, TrainerCallback
 import torch
+from torch import nn
 from torch.utils.data import Dataset, DataLoader, Subset
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -14,6 +15,24 @@ from dataset_wrapper import read_dataset
 
 device = torch.device("cuda:0" if torch.cuda.device_count() > 0 else "cpu")
 print("Using device:", device)
+
+class WeightedLossTrainer(Trainer):
+    def __init__(self, *args, class_weights=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if class_weights is not None:
+            self.loss_fn = nn.CrossEntropyLoss(weight=class_weights.to(self.args.device))
+        else:
+            self.loss_fn = None
+
+    def compute_loss(self, model, inputs, return_outputs=False):
+        labels = inputs.pop("labels")
+        outputs = model(**inputs)
+        logits = outputs.get('logits')
+        if self.loss_fn is not None:
+            loss = self.loss_fn(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        else:
+            loss = outputs.loss
+        return (loss, outputs) if return_outputs else loss
 
 # Custom callback for training accuracy
 class TrainingAccuracyCallback(TrainerCallback):
@@ -109,7 +128,7 @@ class FineTuningConfig:
         self.save_total_limit = 1 
 
         # File Paths and Directories
-        self.output_dir = './results' # Directory to save the model
+        self.output_dir = './results/weighted_loss' # Directory to save the model
         self.logging_dir = './logs'   # Directory to save logs
 
         # Dataset Splitting Parameters
@@ -170,14 +189,20 @@ training_args = TrainingArguments(
     save_total_limit=config.save_total_limit
 )
 
-# Trainer
-trainer = Trainer(
+# Calculate class weights
+class_sample_count = np.array([len(np.where(scores == t)[0]) for t in np.unique(scores)])
+class_weights = 1. / torch.tensor(class_sample_count, dtype=torch.float)
+class_weights = class_weights / class_weights.sum()  # Normalize to sum to 1
+
+# Now initialize the Trainer with the new subclass
+trainer = WeightedLossTrainer(
     model=model,
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
     compute_metrics=compute_metrics,
-    callbacks=[train_acc_callback]
+    callbacks=[train_acc_callback],
+    class_weights=class_weights  # Pass the class weights here
 )
 
 # Train the model
@@ -213,5 +238,5 @@ plt.ylabel('Accuracy')
 plt.legend()
 
 plt.tight_layout()
-plt.savefig('training_validation_metrics.png', dpi=100)
+plt.savefig('training_validation_metrics_WEIGHTED_LOSS.png', dpi=100)
 plt.show()
