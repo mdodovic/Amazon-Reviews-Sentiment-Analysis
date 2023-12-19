@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 import random
 
 # Assuming the dataset_wrapper.py has been correctly imported
-from dataset_wrapper import read_dataset
+from dataset_wrapper import fetch_data
 
 
 device = torch.device("cuda:0" if torch.cuda.device_count() > 0 else "cpu")
@@ -145,7 +145,7 @@ def compute_metrics(p):
 config = FineTuningConfig()
 
 # Read and preprocess the dataset
-reviews, scores = read_dataset(config.dataset_path)
+reviews, scores = fetch_data(config.dataset_path)
 
 # Splitting the dataset
 train_reviews, temp_reviews, train_scores, temp_scores = train_test_split(

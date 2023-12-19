@@ -1,15 +1,32 @@
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from transformers import BertTokenizer
 import re
+import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from imblearn.over_sampling import RandomOverSampler
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+from transformers import BertTokenizer
 
+# Ensure the necessary NLTK data is downloaded
+# nltk.download('stopwords')
+# nltk.download('punkt')
 
-# Modify the read_dataset function in your dataset_wrapper.py to include label conversion
+# Function to normalize text
+def normalize_text(text):
+    text = text.lower()
+    tokens = nltk.word_tokenize(text)
+    tokens = [word for word in tokens if word.isalpha()]
+    stop_words = set(stopwords.words('english'))
+    tokens = [word for word in tokens if not word in stop_words]
+    stemmer = PorterStemmer()
+    tokens = [stemmer.stem(word) for word in tokens]
+    return ' '.join(tokens)
+
+# Function to read dataset from file
 def read_dataset(path):
     reviews = []
     labels = []
-
     with open(path, 'r') as file:
         for line in file:
             if line.startswith('review/text:'):
@@ -17,72 +34,61 @@ def read_dataset(path):
                 reviews.append(review)
             elif line.startswith('review/score:'):
                 score = float(line.split('review/score:')[1].strip())
-                # Convert scores to labels
-                if score < 3.0:
-                    label = 0  # Negative
-                elif score == 3.0:
-                    label = 1  # Neutral
-                else:
-                    label = 2  # Positive
+                label = 0 if score < 3.0 else (1 if score == 3.0 else 2)
                 labels.append(label)
-
     return reviews, labels
 
+# Function to preprocess and normalize reviews
+def preprocess_reviews(reviews):
+    return [normalize_text(review) for review in reviews]
 
-# Use the read_dataset function to get reviews and labels
-reviews, labels = read_dataset('dataset/finefoods.txt')  # Replace with the actual path of your dataset
+def balance_dataset(reviews, labels):
+    # Convert labels to NumPy array for oversampling
+    labels_np = np.array(labels)
 
-# Count the frequency of each label
-label_counts = [labels.count(0), labels.count(1), labels.count(2)]
-label_names = ['Negative', 'Neutral', 'Positive']
+    # Apply over-sampling
+    ros = RandomOverSampler(random_state=42)
+    resampled_indices, _ = ros.fit_resample(np.arange(len(labels)).reshape(-1, 1), labels_np)
 
-# Plotting the label distribution
-plt.figure(figsize=(8, 6))
-plt.bar(label_names, label_counts, color=['red', 'blue', 'green'])
-plt.title('Label Distribution in Dataset')
-plt.xlabel('Sentiment Labels')
-plt.ylabel('Frequency')
-plt.show()
+    # Use the resampled indices to create the resampled reviews
+    reviews_resampled = [reviews[index] for index in resampled_indices.flatten()]
 
-# Calculating review lengths
-review_lengths = [len(review.split()) for review in reviews]
+    # Extract the corresponding labels
+    labels_resampled = labels_np[resampled_indices.flatten()]
 
-# Plotting review length distribution
-plt.figure(figsize=(8, 6))
-plt.hist(review_lengths, bins=30, color='skyblue', edgecolor='black')
-plt.title('Review Length Distribution')
-plt.xlabel('Number of Words in Review')
-plt.ylabel('Frequency')
-plt.show()
+    return reviews_resampled, labels_resampled
 
 
-def preprocess_text(text):
-    # Convert to lowercase
-    text = text.lower()
-    # Remove URLs
-    text = re.sub(r'https?:\/\/.*[\r\n]*', '', text)
-    # Remove HTML tags
-    text = re.sub(r'<[^>]+>', '', text)
-    # Remove punctuation (preserving intra-word dashes)
-    text = re.sub(r'(?<!\w)-(?!\w)', ' ', text)
-    text = re.sub(r'[^\w\s]', '', text)
-    # Remove numbers
-    text = re.sub(r'\d+', '', text)
-    # Remove extra spaces
-    text = re.sub(r'\s+', ' ', text).strip()
-    
-    return text
+# Function to plot label distribution
+def plot_label_distribution(labels):
+    label_counts = np.unique(labels, return_counts=True)
+    label_names = ['Negative', 'Neutral', 'Positive']
+    plt.figure(figsize=(8, 6))
+    plt.bar(label_names, label_counts[1], color=['red', 'blue', 'green'])
+    plt.title('Label Distribution in Dataset')
+    plt.xlabel('Sentiment Labels')
+    plt.ylabel('Frequency')
+    plt.show()
 
-# Apply preprocessing to each review
-preprocessed_reviews = [preprocess_text(review) for review in reviews]
+# Function to plot review length distribution
+def plot_review_length_distribution(reviews):
+    review_lengths = [len(review.split()) for review in reviews]
+    plt.figure(figsize=(8, 6))
+    plt.hist(review_lengths, bins=30, color='skyblue', edgecolor='black')
+    plt.title('Review Length Distribution')
+    plt.xlabel('Number of Words in Review')
+    plt.ylabel('Frequency')
+    plt.show()
 
-# Calculating review lengths
-review_lengths = [len(preprocessed_review.split()) for preprocessed_review in preprocessed_reviews]
 
-# Plotting review length distribution
-plt.figure(figsize=(8, 6))
-plt.hist(review_lengths, bins=30, color='skyblue', edgecolor='black')
-plt.title('Review Length Distribution')
-plt.xlabel('Number of Words in Review')
-plt.ylabel('Frequency')
-plt.show()
+def fetch_data(path):
+    raw_reviews, raw_labels = read_dataset(path)  
+    # preprocessed_reviews = preprocess_reviews(raw_reviews)
+    balanced_reviews, balanced_labels = balance_dataset(raw_reviews, raw_labels)
+
+    plot_label_distribution(raw_labels)
+    plot_review_length_distribution(raw_reviews)
+    plot_label_distribution(balanced_labels)
+    plot_review_length_distribution(balanced_reviews)
+
+fetch_data('dataset/text.txt')
