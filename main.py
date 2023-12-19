@@ -109,7 +109,7 @@ class FineTuningConfig:
         # Path to Dataset
         self.dataset_path = 'dataset/finefoods.txt' 
         self.labels_num = 3 # Number of labels in the dataset
-        self.sampling_method = 'under'
+        self.sampling_method = 'none'
 
         # Model Training Parameters
         self.num_epochs = 3 # Number of training epochs
@@ -129,7 +129,7 @@ class FineTuningConfig:
         self.save_total_limit = 1 
 
         # File Paths and Directories
-        self.output_dir = './results/OVERSAMPLE_MINORITY' # Directory to save the model
+        self.output_dir = './results/WEIGHTED_2' # Directory to save the model
         self.logging_dir = './logs'   # Directory to save logs
 
         # Dataset Splitting Parameters
@@ -192,8 +192,7 @@ training_args = TrainingArguments(
 
 # Calculate class weights
 class_sample_count = np.array([len(np.where(scores == t)[0]) for t in np.unique(scores)])
-class_weights = 1. / torch.tensor(class_sample_count, dtype=torch.float)
-class_weights = class_weights / class_weights.sum()  # Normalize to sum to 1
+class_weights = 1. / class_sample_count
 
 # Now initialize the Trainer with the new subclass
 trainer = WeightedLossTrainer(
@@ -239,5 +238,5 @@ plt.ylabel('Accuracy')
 plt.legend()
 
 plt.tight_layout()
-plt.savefig('training_validation_metrics_OVERSAMPLE_MINORITY.png', dpi=100)
+plt.savefig('training_validation_metrics_WEIGHTED_2.png', dpi=100)
 plt.show()
