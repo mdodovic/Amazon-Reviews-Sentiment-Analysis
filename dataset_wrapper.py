@@ -2,26 +2,46 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from imblearn.under_sampling import RandomUnderSampler
 from imblearn.over_sampling import RandomOverSampler
 import nltk
-from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
-from transformers import BertTokenizer
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 
 # Ensure the necessary NLTK data is downloaded
-# nltk.download('stopwords')
-# nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('omw-1.4')  # If available, for WordNet lemmatization
 
-# Function to normalize text
+
 def normalize_text(text):
+    # Convert to lowercase
     text = text.lower()
-    tokens = nltk.word_tokenize(text)
-    tokens = [word for word in tokens if word.isalpha()]
+
+    # Remove HTML tags
+    text = re.sub(r'<.*?>', '', text)
+
+    # Remove URLs
+    text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
+
+    # Tokenize
+    tokens = word_tokenize(text)
+
+    # Filter out non-alphabetic tokens and stop words
     stop_words = set(stopwords.words('english'))
-    tokens = [word for word in tokens if not word in stop_words]
-    stemmer = PorterStemmer()
-    tokens = [stemmer.stem(word) for word in tokens]
+    tokens = [word for word in tokens if word.isalpha() and word not in stop_words]
+
+    # Initialize the WordNetLemmatizer
+    lemmatizer = WordNetLemmatizer()
+
+    # Lemmatize tokens
+    tokens = [lemmatizer.lemmatize(word) for word in tokens]
+
     return ' '.join(tokens)
+
 
 # Function to read dataset from file
 def read_dataset(path):
@@ -42,22 +62,26 @@ def read_dataset(path):
 def preprocess_reviews(reviews):
     return [normalize_text(review) for review in reviews]
 
-def balance_dataset(reviews, labels):
-    # Convert labels to NumPy array for oversampling
+def balance_dataset(reviews, labels, sampling_method='over'):
     labels_np = np.array(labels)
+    resampled_indices = np.arange(len(labels)).reshape(-1, 1)
 
-    # Apply over-sampling
-    ros = RandomOverSampler(random_state=42)
-    resampled_indices, _ = ros.fit_resample(np.arange(len(labels)).reshape(-1, 1), labels_np)
+    if sampling_method == 'over':
+        sampler = RandomOverSampler(random_state=42)
+    elif sampling_method == 'under':
+        sampler = RandomUnderSampler(random_state=42)
+    else:
+        # If no valid method specified, return the original dataset
+        return reviews, labels_np
 
-    # Use the resampled indices to create the resampled reviews
-    reviews_resampled = [reviews[index] for index in resampled_indices.flatten()]
+    # Apply sampling
+    resampled_indices, _ = sampler.fit_resample(resampled_indices, labels_np)
 
-    # Extract the corresponding labels
+    # Use the resampled indices to create the resampled reviews and labels
+    reviews_resampled = [reviews[index[0]] for index in resampled_indices]
     labels_resampled = labels_np[resampled_indices.flatten()]
 
     return reviews_resampled, labels_resampled
-
 
 # Function to plot label distribution
 def plot_label_distribution(labels):
@@ -80,17 +104,23 @@ def plot_review_length_distribution(reviews):
     plt.ylabel('Frequency')
     plt.show()
 
-
-def fetch_data(path):
-    raw_reviews, raw_labels = read_dataset(path)  
-    # preprocessed_reviews = preprocess_reviews(raw_reviews)
-    balanced_reviews, balanced_labels = balance_dataset(raw_reviews, raw_labels)
+def fetch_data(path, sampling_method='over'):
+    raw_reviews, raw_labels = read_dataset(path)
+    preprocessed_reviews = preprocess_reviews(raw_reviews)
+    balanced_reviews, balanced_labels = balance_dataset(preprocessed_reviews, raw_labels, sampling_method)
 
     plot_label_distribution(raw_labels)
     plot_review_length_distribution(raw_reviews)
+
+    plot_review_length_distribution(preprocessed_reviews)
+
     plot_label_distribution(balanced_labels)
     plot_review_length_distribution(balanced_reviews)
 
     return balanced_reviews, balanced_labels
 
-fetch_data('dataset/text.txt')
+
+#fetch_data('dataset/text.txt', sampling_method='under')
+#fetch_data('dataset/text.txt', sampling_method='over')
+#fetch_data('dataset/finefoods.txt', sampling_method='under')
+#fetch_data('dataset/finefoods.txt', sampling_method='over')
