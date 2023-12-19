@@ -192,7 +192,8 @@ training_args = TrainingArguments(
 
 # Calculate class weights
 class_sample_count = np.array([len(np.where(scores == t)[0]) for t in np.unique(scores)])
-class_weights = 1. / class_sample_count
+class_weights = 1. / torch.tensor(class_sample_count, dtype=torch.float)
+class_weights = class_weights / class_weights.sum()  # Normalize to sum to 1
 
 # Now initialize the Trainer with the new subclass
 trainer = WeightedLossTrainer(
