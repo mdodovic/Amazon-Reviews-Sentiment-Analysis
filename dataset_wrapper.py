@@ -91,4 +91,6 @@ def fetch_data(path):
     plot_label_distribution(balanced_labels)
     plot_review_length_distribution(balanced_reviews)
 
+    return balanced_reviews, balanced_labels
+
 fetch_data('dataset/text.txt')
