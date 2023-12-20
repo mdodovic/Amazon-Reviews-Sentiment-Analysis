@@ -122,10 +122,10 @@ class FineTuningConfig:
 
         # Strategy and steps
         self.log_and_eval_strategy = 'steps'
-        self.log_and_eval_steps = 2000  # Choose a value that suits your training regimen
+        self.log_and_eval_steps = 500  # Choose a value that suits your training regimen
         
         self.save_strategy = 'steps'
-        self.save_steps = 2000  # Choose a value that suits your training regimen
+        self.save_steps = 500  # Choose a value that suits your training regimen
         self.save_total_limit = 1 
 
         # File Paths and Directories
