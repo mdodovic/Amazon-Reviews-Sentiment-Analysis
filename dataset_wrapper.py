@@ -42,7 +42,7 @@ def normalize_text(text):
 
     return ' '.join(tokens)
 
-
+name_hash = {}
 # Function to read dataset from file
 def read_dataset(path):
     reviews = []
@@ -56,6 +56,11 @@ def read_dataset(path):
                 score = float(line.split('review/score:')[1].strip())
                 label = 0 if score < 3.0 else (1 if score == 3.0 else 2)
                 labels.append(label)
+            # elif line.startswith('review/profileName'):
+            #     if name_hash.has(line.split('review/profileName:')[1].strip()):
+            #         name_hash[line.split('review/profileName:')[1].strip()] += 1
+            #     else:
+            #         name_hash[line.split('review/profileName:')[1].strip()] = 1
     return reviews, labels
 
 # Function to preprocess and normalize reviews
@@ -104,10 +109,17 @@ def plot_review_length_distribution(reviews):
     plt.ylabel('Frequency')
     plt.show()
 
+# Plot name distribution 
+# def plot_distribution_per_name(name_hash):
+
+#     for key, value in name_hash.items():
+#         print(key, value)
+
 def fetch_data(path, sampling_method='over'):
     raw_reviews, raw_labels = read_dataset(path)
-    preprocessed_reviews = preprocess_reviews(raw_reviews)
-    balanced_reviews, balanced_labels = balance_dataset(preprocessed_reviews, raw_labels, sampling_method)
+    return raw_reviews, raw_labels
+    #preprocessed_reviews = preprocess_reviews(raw_reviews)
+    #balanced_reviews, balanced_labels = balance_dataset(preprocessed_reviews, raw_labels, sampling_method)
 
     # plot_label_distribution(raw_labels)
     # plot_review_length_distribution(raw_reviews)
@@ -117,11 +129,14 @@ def fetch_data(path, sampling_method='over'):
     # plot_label_distribution(balanced_labels)
     # plot_review_length_distribution(balanced_reviews)
 
+    #plot_distribution_per_name(name_hash)
+
     return balanced_reviews, balanced_labels
 
 
 #fetch_data('dataset/text.txt', sampling_method='under')
 #fetch_data('dataset/text.txt', sampling_method='over')
+fetch_data('dataset/text.txt', sampling_method='over')
 #fetch_data('dataset/finefoods.txt', sampling_method='under')
 #fetch_data('dataset/finefoods.txt', sampling_method='over')
 #fetch_data('dataset/finefoods.txt', sampling_method='none')
