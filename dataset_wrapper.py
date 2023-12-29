@@ -117,6 +117,9 @@ def plot_review_length_distribution(reviews):
 
 def fetch_data(path, sampling_method='over'):
     raw_reviews, raw_labels = read_dataset(path)
+    plot_label_distribution(raw_labels)
+    plot_review_length_distribution(raw_reviews)
+
     return raw_reviews, raw_labels
     #preprocessed_reviews = preprocess_reviews(raw_reviews)
     #balanced_reviews, balanced_labels = balance_dataset(preprocessed_reviews, raw_labels, sampling_method)
