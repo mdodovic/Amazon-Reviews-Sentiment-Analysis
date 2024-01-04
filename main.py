@@ -129,7 +129,7 @@ class FineTuningConfig:
         self.save_total_limit = 1 
 
         # File Paths and Directories
-        self.output_dir = './results/WEIGHTED_4' # Directory to save the model
+        self.output_dir = './results/WEIGHTED_5' # Directory to save the model
         self.logging_dir = './logs'   # Directory to save logs
 
         # Dataset Splitting Parameters
@@ -239,5 +239,5 @@ plt.ylabel('Accuracy')
 plt.legend()
 
 plt.tight_layout()
-plt.savefig('training_validation_metrics_WEIGHTED_4.png', dpi=100)
+plt.savefig('training_validation_metrics_WEIGHTED_5.png', dpi=100)
 plt.show()
