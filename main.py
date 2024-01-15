@@ -1,4 +1,4 @@
-from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments, TrainerCallback
+from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments, TrainerCallback, EarlyStoppingCallback
 import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader, Subset
@@ -129,7 +129,7 @@ class FineTuningConfig:
         self.save_total_limit = 1 
 
         # File Paths and Directories
-        self.output_dir = './results/WEIGHTED_5' # Directory to save the model
+        self.output_dir = './results/WEIGHTED_EARLY_STOPPING' # Directory to save the model
         self.logging_dir = './logs'   # Directory to save logs
 
         # Dataset Splitting Parameters
@@ -171,7 +171,6 @@ model.to(device)
 # Instantiate the training accuracy callback
 train_acc_callback = TrainingAccuracyCallback(train_dataset, config.train_batch_size, subset_size=1000)
 
-# Update the TrainingArguments with the new strategies
 training_args = TrainingArguments(
     output_dir=config.output_dir,
     num_train_epochs=config.num_epochs,
@@ -187,13 +186,21 @@ training_args = TrainingArguments(
     logging_steps=config.log_and_eval_steps,
     save_strategy=config.save_strategy,
     save_steps=config.save_steps,
-    save_total_limit=config.save_total_limit
+    save_total_limit=config.save_total_limit,
+    load_best_model_at_end=True,  # Ensure this is set to True for EarlyStoppingCallback
+    metric_for_best_model='eval_loss'  # You can choose a metric from those returned by compute_metrics
 )
 
 # Calculate class weights
 class_sample_count = np.array([len(np.where(scores == t)[0]) for t in np.unique(scores)])
 class_weights = 1. / torch.tensor(class_sample_count, dtype=torch.float)
 class_weights = class_weights / class_weights.sum()  # Normalize to sum to 1
+
+# Instantiate the early stopping callback
+early_stopping_callback = EarlyStoppingCallback(
+    early_stopping_patience=3,  # Number of steps with no improvement after which training will be stopped
+    early_stopping_threshold=0.0  # Minimum change needed to count as an improvement
+)
 
 # Now initialize the Trainer with the new subclass
 trainer = WeightedLossTrainer(
@@ -202,8 +209,8 @@ trainer = WeightedLossTrainer(
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
     compute_metrics=compute_metrics,
-    callbacks=[train_acc_callback],
-    class_weights=class_weights  # Pass the class weights here
+    callbacks=[train_acc_callback, early_stopping_callback],  # Add the early stopping callback here
+    class_weights=class_weights
 )
 
 # Train the model
@@ -239,5 +246,5 @@ plt.ylabel('Accuracy')
 plt.legend()
 
 plt.tight_layout()
-plt.savefig('training_validation_metrics_WEIGHTED_5.png', dpi=100)
+plt.savefig('training_validation_metrics_WEIGHTED_EARLY_STOPPING.png', dpi=100)
 plt.show()
