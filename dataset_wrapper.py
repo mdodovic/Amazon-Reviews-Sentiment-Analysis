@@ -119,7 +119,8 @@ def plot_review_length_distribution_better_scale(reviews):
     plt.title('Review Length Distribution')
     plt.xlabel('Number of Words in Review')
     plt.ylabel('Frequency (Log Scale)')  # Updated label to indicate log scale
-    plt.grid(True, which="both", ls="-")  # Add grid for better readability
+    #plt.grid(True, which="both", ls="-")  # Add grid for better readability
+    plt.grid(True, which="both", ls=":", color='gray', alpha=0.5)  # Lighter grid lines
     plt.savefig("Dataset_length_distribution_log_scale.png", dpi=90)
     plt.show()
 
