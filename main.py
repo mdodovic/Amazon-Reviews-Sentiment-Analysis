@@ -129,11 +129,11 @@ class FineTuningConfig:
         self.save_total_limit = 1 
 
         # File Paths and Directories
-        self.output_dir = './results/WEIGHTED_EARLY_STOPPING' # Directory to save the model
+        self.output_dir = './results/WEIGHTED_EARLY_STOPPING_2' # Directory to save the model
         self.logging_dir = './logs'   # Directory to save logs
 
         # Dataset Splitting Parameters
-        self.validation_split = 0.2  # Portion of the data for validation
+        self.validation_split = 0.1  # Portion of the data for validation
         self.test_split = 0.5        # Portion of the validation data for testing
         self.random_state = 42       # Random state for reproducibility
 
@@ -246,5 +246,5 @@ plt.ylabel('Accuracy')
 plt.legend()
 
 plt.tight_layout()
-plt.savefig('training_validation_metrics_WEIGHTED_EARLY_STOPPING.png', dpi=100)
+plt.savefig('training_validation_metrics_WEIGHTED_EARLY_STOPPING_2.png', dpi=100)
 plt.show()

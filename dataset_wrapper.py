@@ -117,10 +117,10 @@ def plot_review_length_distribution(reviews):
 
 def fetch_data(path, sampling_method='over'):
     raw_reviews, raw_labels = read_dataset(path)
-    #plot_label_distribution(raw_labels)
-    #plot_review_length_distribution(raw_reviews)
+    plot_label_distribution(raw_labels)
+    plot_review_length_distribution(raw_reviews)
 
-    return raw_reviews, raw_labels
+    # return raw_reviews, raw_labels
     #preprocessed_reviews = preprocess_reviews(raw_reviews)
     #balanced_reviews, balanced_labels = balance_dataset(preprocessed_reviews, raw_labels, sampling_method)
 
@@ -132,9 +132,9 @@ def fetch_data(path, sampling_method='over'):
     # plot_label_distribution(balanced_labels)
     # plot_review_length_distribution(balanced_reviews)
 
-    #plot_distribution_per_name(name_hash)
+    # plot_distribution_per_name(name_hash)
 
-    return balanced_reviews, balanced_labels
+    # return balanced_reviews, balanced_labels
 
 
 #fetch_data('dataset/text.txt', sampling_method='under')
@@ -142,4 +142,4 @@ def fetch_data(path, sampling_method='over'):
 #fetch_data('dataset/text.txt', sampling_method='over')
 #fetch_data('dataset/finefoods.txt', sampling_method='under')
 #fetch_data('dataset/finefoods.txt', sampling_method='over')
-#fetch_data('dataset/finefoods.txt', sampling_method='none')
+fetch_data('dataset/finefoods.txt', sampling_method='none')
