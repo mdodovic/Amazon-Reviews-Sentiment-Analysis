@@ -97,6 +97,7 @@ def plot_label_distribution(labels):
     plt.title('Label Distribution in Dataset')
     plt.xlabel('Sentiment Labels')
     plt.ylabel('Frequency')
+    plt.savefig("Dataset label distribution.png", dpi=90)
     plt.show()
 
 # Function to plot review length distribution
@@ -107,7 +108,21 @@ def plot_review_length_distribution(reviews):
     plt.title('Review Length Distribution')
     plt.xlabel('Number of Words in Review')
     plt.ylabel('Frequency')
+    plt.savefig("Dataset length distribution.png", dpi=90)
     plt.show()
+
+
+def plot_review_length_distribution_better_scale(reviews):
+    review_lengths = [len(review.split()) for review in reviews]
+    plt.figure(figsize=(8, 6))
+    plt.hist(review_lengths, bins=30, color='skyblue', edgecolor='black', log=True)  # Added log=True for logarithmic scale
+    plt.title('Review Length Distribution')
+    plt.xlabel('Number of Words in Review')
+    plt.ylabel('Frequency (Log Scale)')  # Updated label to indicate log scale
+    plt.grid(True, which="both", ls="-")  # Add grid for better readability
+    plt.savefig("Dataset_length_distribution_log_scale.png", dpi=90)
+    plt.show()
+
 
 # Plot name distribution 
 # def plot_distribution_per_name(name_hash):
@@ -117,8 +132,9 @@ def plot_review_length_distribution(reviews):
 
 def fetch_data(path, sampling_method='over'):
     raw_reviews, raw_labels = read_dataset(path)
-    plot_label_distribution(raw_labels)
-    plot_review_length_distribution(raw_reviews)
+    #plot_label_distribution(raw_labels)
+    #plot_review_length_distribution(raw_reviews)
+    plot_review_length_distribution_better_scale(raw_reviews)
 
     # return raw_reviews, raw_labels
     #preprocessed_reviews = preprocess_reviews(raw_reviews)
