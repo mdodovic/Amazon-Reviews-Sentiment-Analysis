@@ -119,8 +119,7 @@ def plot_review_length_distribution_better_scale(reviews):
     plt.title('Review Length Distribution')
     plt.xlabel('Number of Words in Review')
     plt.ylabel('Frequency (Log Scale)')  # Updated label to indicate log scale
-    #plt.grid(True, which="both", ls="-")  # Add grid for better readability
-    plt.grid(True, which="both", ls=":", color='gray', alpha=0.5)  # Lighter grid lines
+    plt.grid(True, which="both", ls="-")  # Add grid for better readability
     plt.savefig("Dataset_length_distribution_log_scale.png", dpi=90)
     plt.show()
 
@@ -133,11 +132,11 @@ def plot_review_length_distribution_better_scale(reviews):
 
 def fetch_data(path, sampling_method='over'):
     raw_reviews, raw_labels = read_dataset(path)
-    #plot_label_distribution(raw_labels)
-    #plot_review_length_distribution(raw_reviews)
+    plot_label_distribution(raw_labels)
+    plot_review_length_distribution(raw_reviews)
     plot_review_length_distribution_better_scale(raw_reviews)
 
-    # return raw_reviews, raw_labels
+    return raw_reviews, raw_labels
     #preprocessed_reviews = preprocess_reviews(raw_reviews)
     #balanced_reviews, balanced_labels = balance_dataset(preprocessed_reviews, raw_labels, sampling_method)
 
@@ -159,4 +158,4 @@ def fetch_data(path, sampling_method='over'):
 #fetch_data('dataset/text.txt', sampling_method='over')
 #fetch_data('dataset/finefoods.txt', sampling_method='under')
 #fetch_data('dataset/finefoods.txt', sampling_method='over')
-fetch_data('dataset/finefoods.txt', sampling_method='none')
+#fetch_data('dataset/finefoods.txt', sampling_method='none')
