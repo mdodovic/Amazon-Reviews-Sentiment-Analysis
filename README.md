@@ -1,4 +1,5 @@
-# Amazon-Reviews-Sentiment-Analysis
+# Enhancing Sentiment Analysis in Product Reviews
+*Fine-Tuning BERT for Class Imbalance and Optimal Sequence Representation*
 
 ## Overview
 
@@ -36,4 +37,9 @@ publisher="Springer Nature Switzerland",
 address="Cham",
 pages="348--359",
 }
+
+## Acknowledgments
+
+This research was supported by the Science Fund of the Republic of Serbia, Grant No 11113, Software for Text Offences Prevention in Serbian: Al-driven Hate Speech Detection - STOP.
+This work was financially supported by the Ministry of Science, Technological Development and Innovation of the Republic of Serbia under contract number: 451–03-65/2024–03/200103.
 ```
