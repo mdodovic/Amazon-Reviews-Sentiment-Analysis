@@ -13,6 +13,27 @@ This repository contains a sentiment analysis tool for Amazon reviews. It levera
 This project is licensed under the CC0-1.0 license.
 
 ## Citation
-You can cite this project as:
+If you use this work in your research, please cite:
 
-TBD
+### APA
+```
+Dodović, M., Ogrizović, M., Miladinović, D., Drašković, D. (2024). Enhancing Sentiment Analysis in Product Reviews: Fine-Tuning BERT for Class Imbalance and Optimal Sequence Representation. In: Trajanović, M., Filipović, N., Zdravković, M. (eds) Disruptive Information Technologies for a Smart Society. ICIST 2024. Lecture Notes in Networks and Systems, vol 860. Springer, Cham. https://doi.org/10.1007/978-3-031-71419-1_30
+```
+### BibTeX
+```
+@InProceedings{10.1007/978-3-031-71419-1_30,
+author="Dodovi{\'{c}}, Matija
+and Ogrizovi{\'{c}}, Mihajlo
+and Miladinovi{\'{c}}, Danko
+and Dra{\v{s}}kovi{\'{c}}, Dra{\v{z}}en",
+editor="Trajanovi{\'{c}}, Miroslav
+and Filipovi{\'{c}}, Nenad
+and Zdravkovi{\'{c}}, Milan",
+title="Enhancing Sentiment Analysis in Product Reviews: Fine-Tuning BERT for Class Imbalance and Optimal Sequence Representation",
+booktitle="Disruptive Information Technologies for a Smart Society",
+year="2024",
+publisher="Springer Nature Switzerland",
+address="Cham",
+pages="348--359",
+}
+```
