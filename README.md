@@ -1,9 +1,12 @@
-# Enhancing Sentiment Analysis in Product Reviews
-*Fine-Tuning BERT for Class Imbalance and Optimal Sequence Representation*
+# Enhancing Sentiment Analysis in Product Reviews: *Fine-Tuning BERT for Class Imbalance and Optimal Sequence Representation*
+
+This repository 
 
 ## Overview
 
 This repository contains a sentiment analysis tool for Amazon reviews. It leverages BERT (Bidirectional Encoder Representations from Transformers) to classify reviews into positive and negative sentiments. The project is designed to help understand customer feedback at scale.
+This repository is created for research published at the **International Conference on Information and Communication Technologies (ICIST 2023)** and later included in the Springer book series *Lecture Notes in Networks and Systems*: [https://doi.org/10.1007/978-3-031-71419-1_30](https://doi.org/10.1007/978-3-031-71419-1_30)
+
 
 ## Usage
 
